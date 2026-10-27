@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { auth } from "@/server/auth";
+import { getAvailableBedsByRoomType } from "@/server/queries/availability";
 
 export const instant = false;
 
@@ -44,21 +45,43 @@ async function HomeAuthActions() {
         href="/login?callbackUrl=/resident"
         className="rounded-md border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-800"
       >
-        Resident portal
-      </Link>
-      <Link
-        href="/login?callbackUrl=/manager"
-        className="rounded-md border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-800"
-      >
-        Manager panel
-      </Link>
-      <Link
-        href="/login?callbackUrl=/admin"
-        className="rounded-md border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-800"
-      >
-        Admin CMS
+        Apply for a bed
       </Link>
     </div>
+  );
+}
+
+async function LiveAvailability() {
+  const rows = await getAvailableBedsByRoomType();
+  const totalAvailable = rows.reduce((sum, row) => sum + row.availableBeds, 0);
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h2 className="text-lg font-medium text-stone-900">Live availability</h2>
+        <p className="text-sm text-stone-500">
+          {totalAvailable} bed{totalAvailable === 1 ? "" : "s"} open right now
+        </p>
+      </div>
+      <ul className="divide-y divide-stone-200 border border-stone-200">
+        {rows.map((row) => (
+          <li
+            key={row.id}
+            className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+          >
+            <div>
+              <p className="font-medium text-stone-900">{row.name}</p>
+              <p className="text-sm text-stone-500">
+                {row.capacity}-in-1 · GHS {row.pricePerBed} / bed
+              </p>
+            </div>
+            <p className="text-sm font-medium text-stone-800">
+              {row.availableBeds} available
+            </p>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -73,8 +96,8 @@ export default function HomePage() {
           Hostel inventory, bookings, and payment review — one system.
         </h1>
         <p className="max-w-xl text-lg text-stone-600">
-          Public availability, resident proof-of-payment uploads, and manager
-          approval workflows on a flexible room-type model.
+          See live bed availability, hold a space, and upload MoMo or bank
+          payment proof for manager review.
         </p>
       </div>
 
@@ -86,15 +109,13 @@ export default function HomePage() {
         <HomeAuthActions />
       </Suspense>
 
-      <p className="text-sm text-stone-500">
-        Demo password: <code className="rounded bg-stone-100 px-1">ChangeMe123!</code>
-        {" · "}
-        <code className="rounded bg-stone-100 px-1">admin@victorious.local</code>
-        {" / "}
-        <code className="rounded bg-stone-100 px-1">manager@victorious.local</code>
-        {" / "}
-        <code className="rounded bg-stone-100 px-1">resident@victorious.local</code>
-      </p>
+      <Suspense
+        fallback={
+          <div className="h-40 animate-pulse rounded-md bg-stone-100" />
+        }
+      >
+        <LiveAvailability />
+      </Suspense>
     </main>
   );
 }

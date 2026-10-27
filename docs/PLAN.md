@@ -19,16 +19,23 @@
 - [x] Seed: 1 residence, 3 demo users, 3 room types, rooms + 22 bed spaces
 - [x] Portal shells with live read-only counts (availability / occupancy / room types)
 
-### In progress — Phase 1 Inventory CMS
+### Done — Phase 1 Inventory CMS
 - [x] Admin RoomType CRUD (create / edit / deactivate) — `/admin/room-types`
 - [x] Bulk provision N rooms of a type (auto-create bed spaces by capacity) — `/admin/provision`
 - [x] Occupancy board (room → bed matrix) — `/admin/occupancy`
 - [x] Shared availability / occupancy query helpers — `src/server/queries/availability.ts`
 
+### In progress — Phase 2 Resident booking
+- [x] Public landing live availability counters
+- [x] Resident browse / choose bed
+- [x] Atomic bed hold + `expiresAt`
+- [x] Payment reference + receipt upload
+- [x] My bookings
+- [x] Cron: expire stale PENDING (`/api/cron/expire-bookings`)
+
 ### Not started
-- Phase 2 Public + resident booking hold / receipt upload  
 - Phase 3 Manager approve/reject queue  
-- Phase 4 Hardening, Vercel production, training  
+- Phase 4 Hardening, object storage receipts, training  
 
 ---
 
@@ -218,14 +225,14 @@ AVAILABLE ──select──► PENDING_PAYMENT ──manager approve──► O
 - [x] Occupancy board  
 - [x] Shared availability query helpers  
 
-### Phase 2 — Public + Resident booking
+### Phase 2 — Public + Resident booking ✅ (manager review still Phase 3)
 
-- [ ] Public landing + media + live counters  
-- [ ] Resident browse/filter  
-- [ ] Atomic bed hold + `expiresAt`  
-- [ ] Receipt upload + payment reference  
-- [ ] My bookings  
-- [ ] Cron: expire stale PENDING  
+- [x] Public landing + live counters  
+- [x] Resident browse/filter  
+- [x] Atomic bed hold + `expiresAt`  
+- [x] Receipt upload + payment reference  
+- [x] My bookings  
+- [x] Cron: expire stale PENDING  
 
 ### Phase 3 — Manager workflow
 
@@ -290,4 +297,4 @@ RETURNING *;
 2. ~~`drizzle.config.ts` + full schema~~ ✅  
 3. ~~Migration + seed~~ ✅  
 4. ~~Auth + role middleware~~ ✅  
-5. ~~**Admin CMS**~~ ✅ → **Resident booking** → Manager review → Public polish
+5. ~~Admin CMS~~ ✅ → ~~Resident booking~~ ✅ → **Manager review** → Public polish

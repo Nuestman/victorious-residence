@@ -9,6 +9,12 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Phase 2 resident booking flow
+  - Public home live availability counters
+  - Browse room types → choose available bed → atomic hold
+  - Payment reference + receipt upload (≤1.5MB image/PDF)
+  - My bookings list and booking detail
+  - Hourly cron route `/api/cron/expire-bookings` + `vercel.json`
 - `docs/` directory with plan, proposal, and invoice docs
 - Root `CHANGELOG.md` and `docs/README.md` index
 
@@ -20,9 +26,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Planned
 
-- Phase 2: public landing polish, resident bed hold, payment proof upload, my bookings, hold expiry job
 - Phase 3: manager payment review queue (approve / reject) with audit trail
-- Phase 4: hardening, production deploy, training
+- Phase 4: hardening, object-storage receipts, production polish
 
 ## [0.2.0] - 2026-10-27
 

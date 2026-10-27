@@ -1,41 +1,20 @@
-import { and, count, eq, sql } from "drizzle-orm";
-import { redirect } from "next/navigation";
+import { count } from "drizzle-orm";
 import { Suspense } from "react";
 
 import { PortalShell } from "@/components/portal-shell";
-import { auth } from "@/server/auth";
+import { requireRole } from "@/server/auth/guards";
 import { db } from "@/server/db";
-import { bedSpaces, roomTypes, rooms } from "@/server/db/schema";
+import { bedSpaces } from "@/server/db/schema";
+import { getAvailableBedsByRoomType } from "@/server/queries/availability";
 
 export const instant = false;
 
 async function ResidentContent() {
-  const session = await auth();
+  const session = await requireRole("RESIDENT", "/resident");
 
-  if (!session?.user) {
-    redirect("/login?callbackUrl=/resident");
-  }
-
-  const availability = await db
-    .select({
-      id: roomTypes.id,
-      name: roomTypes.name,
-      capacity: roomTypes.capacity,
-      pricePerBed: roomTypes.pricePerBed,
-      availableBeds: sql<number>`count(${bedSpaces.id}) filter (where ${bedSpaces.status} = 'AVAILABLE')`.mapWith(
-        Number,
-      ),
-    })
-    .from(roomTypes)
-    .innerJoin(
-      rooms,
-      and(eq(rooms.roomTypeId, roomTypes.id), eq(rooms.isActive, true)),
-    )
-    .innerJoin(bedSpaces, eq(bedSpaces.roomId, rooms.id))
-    .where(eq(roomTypes.isActive, true))
-    .groupBy(roomTypes.id)
-    .orderBy(roomTypes.sortOrder);
-
+  const availability = await getAvailableBedsByRoomType(
+    session.user.residenceId ?? undefined,
+  );
   const [{ totalBeds }] = await db
     .select({ totalBeds: count() })
     .from(bedSpaces);

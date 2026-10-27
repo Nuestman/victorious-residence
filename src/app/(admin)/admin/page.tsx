@@ -1,35 +1,29 @@
+import Link from "next/link";
 import { count, eq } from "drizzle-orm";
-import { redirect } from "next/navigation";
-import { Suspense } from "react";
 
+import { AdminNav } from "@/components/admin/admin-nav";
 import { PortalShell } from "@/components/portal-shell";
-import { auth } from "@/server/auth";
+import { requireAdmin } from "@/server/auth/guards";
 import { db } from "@/server/db";
-import { roomTypes, rooms, users } from "@/server/db/schema";
+import { bedSpaces, roomTypes, rooms, users } from "@/server/db/schema";
+import { getAvailableBedsByRoomType } from "@/server/queries/availability";
 
 export const instant = false;
 
-async function AdminContent() {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect("/login?callbackUrl=/admin");
-  }
+export default async function AdminHomePage() {
+  const session = await requireAdmin("/admin");
 
   const [typeCount] = await db.select({ value: count() }).from(roomTypes);
   const [roomCount] = await db.select({ value: count() }).from(rooms);
   const [userCount] = await db.select({ value: count() }).from(users);
-  const types = await db
-    .select({
-      id: roomTypes.id,
-      name: roomTypes.name,
-      capacity: roomTypes.capacity,
-      pricePerBed: roomTypes.pricePerBed,
-      isActive: roomTypes.isActive,
-    })
-    .from(roomTypes)
-    .where(eq(roomTypes.isActive, true))
-    .orderBy(roomTypes.sortOrder);
+  const [availableBeds] = await db
+    .select({ value: count() })
+    .from(bedSpaces)
+    .where(eq(bedSpaces.status, "AVAILABLE"));
+
+  const availability = await getAvailableBedsByRoomType(
+    session.user.residenceId ?? undefined,
+  );
 
   return (
     <PortalShell
@@ -39,10 +33,13 @@ async function AdminContent() {
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <section className="grid gap-4 sm:grid-cols-3">
+      <AdminNav currentPath="/admin" />
+
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Room types", value: typeCount.value },
           { label: "Rooms", value: roomCount.value },
+          { label: "Available beds", value: availableBeds.value },
           { label: "Users", value: userCount.value },
         ].map((stat) => (
           <div key={stat.label} className="border border-stone-200 px-4 py-3">
@@ -55,40 +52,42 @@ async function AdminContent() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-medium text-stone-900">Room types</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-medium text-stone-900">Availability</h2>
+          <div className="flex gap-2">
+            <Link
+              href="/admin/room-types"
+              className="text-sm font-medium text-stone-800 underline"
+            >
+              Manage types
+            </Link>
+            <Link
+              href="/admin/provision"
+              className="text-sm font-medium text-stone-800 underline"
+            >
+              Provision rooms
+            </Link>
+          </div>
+        </div>
         <ul className="divide-y divide-stone-200 border border-stone-200">
-          {types.map((type) => (
+          {availability.map((row) => (
             <li
-              key={type.id}
+              key={row.id}
               className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
             >
               <div>
-                <p className="font-medium text-stone-900">{type.name}</p>
+                <p className="font-medium text-stone-900">{row.name}</p>
                 <p className="text-sm text-stone-500">
-                  Capacity {type.capacity} · GHS {type.pricePerBed} / bed
+                  {row.capacity}-in-1 · GHS {row.pricePerBed} / bed
                 </p>
               </div>
-              <span className="text-xs tracking-wide text-stone-500 uppercase">
-                {type.isActive ? "Active" : "Inactive"}
-              </span>
+              <p className="text-sm font-medium text-stone-800">
+                {row.availableBeds} / {row.totalBeds} available
+              </p>
             </li>
           ))}
         </ul>
       </section>
     </PortalShell>
-  );
-}
-
-export default function AdminHomePage() {
-  return (
-    <Suspense
-      fallback={
-        <main className="mx-auto max-w-5xl px-6 py-12 text-stone-500">
-          Loading admin CMS…
-        </main>
-      }
-    >
-      <AdminContent />
-    </Suspense>
   );
 }

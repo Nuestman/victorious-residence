@@ -19,11 +19,11 @@
 - [x] Seed: 1 residence, 3 demo users, 3 room types, rooms + 22 bed spaces
 - [x] Portal shells with live read-only counts (availability / occupancy / room types)
 
-### Next — Phase 1 Inventory CMS (this slice)
-- [ ] Admin RoomType CRUD (create / edit / deactivate)
-- [ ] Bulk provision N rooms of a type (auto-create bed spaces by capacity)
-- [ ] Occupancy board (room → beds matrix)
-- [ ] Harden availability aggregation helpers used by public/resident later
+### In progress — Phase 1 Inventory CMS
+- [x] Admin RoomType CRUD (create / edit / deactivate) — `/admin/room-types`
+- [x] Bulk provision N rooms of a type (auto-create bed spaces by capacity) — `/admin/provision`
+- [x] Occupancy board (room → bed matrix) — `/admin/occupancy`
+- [x] Shared availability / occupancy query helpers — `src/server/queries/availability.ts`
 
 ### Not started
 - Phase 2 Public + resident booking hold / receipt upload  
@@ -211,12 +211,12 @@ AVAILABLE ──select──► PENDING_PAYMENT ──manager approve──► O
 - [x] Seed: 1 residence, ADMIN + MANAGER + RESIDENT, sample types/rooms/beds  
 - [x] Login/logout verified for all three roles; portals open with live DB reads  
 
-### Phase 1 — Inventory CMS ← **current**
+### Phase 1 — Inventory CMS ✅ (UI shipped; UAT in progress)
 
-- [ ] RoomType CRUD  
-- [ ] Bulk provision N rooms of type X  
-- [ ] Occupancy board  
-- [ ] Shared availability query helpers  
+- [x] RoomType CRUD  
+- [x] Bulk provision N rooms of type X  
+- [x] Occupancy board  
+- [x] Shared availability query helpers  
 
 ### Phase 2 — Public + Resident booking
 
@@ -290,4 +290,4 @@ RETURNING *;
 2. ~~`drizzle.config.ts` + full schema~~ ✅  
 3. ~~Migration + seed~~ ✅  
 4. ~~Auth + role middleware~~ ✅  
-5. **Admin CMS** → Resident booking → Manager review → Public polish
+5. ~~**Admin CMS**~~ ✅ → **Resident booking** → Manager review → Public polish

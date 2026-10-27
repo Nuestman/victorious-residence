@@ -9,6 +9,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Phase 3 manager review workflow
+  - Overview with occupancy + ready-to-review counts (`/manager`)
+  - Review queue with proof / all-pending filters (`/manager/reviews`)
+  - Booking detail with receipt lightbox-style view
+  - Race-safe Approve (OCCUPIED) / Reject (release bed) + audit logs
 - Phase 2 resident booking flow
   - Public home live availability counters
   - Browse room types → choose available bed → atomic hold
@@ -26,7 +31,6 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Planned
 
-- Phase 3: manager payment review queue (approve / reject) with audit trail
 - Phase 4: hardening, object-storage receipts, production polish
 
 ## [0.2.0] - 2026-10-27

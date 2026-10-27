@@ -25,7 +25,7 @@
 - [x] Occupancy board (room → bed matrix) — `/admin/occupancy`
 - [x] Shared availability / occupancy query helpers — `src/server/queries/availability.ts`
 
-### In progress — Phase 2 Resident booking
+### Done — Phase 2 Resident booking
 - [x] Public landing live availability counters
 - [x] Resident browse / choose bed
 - [x] Atomic bed hold + `expiresAt`
@@ -33,8 +33,13 @@
 - [x] My bookings
 - [x] Cron: expire stale PENDING (`/api/cron/expire-bookings`)
 
+### In progress — Phase 3 Manager workflow
+- [x] Review queue (`/manager/reviews`)
+- [x] Approve / Reject with audit log (`/manager/reviews/[id]`)
+- [x] Dashboard counts + ready-to-review preview
+- [x] Race-safe approve/reject (`UPDATE … WHERE payment_status = 'PENDING'`)
+
 ### Not started
-- Phase 3 Manager approve/reject queue  
 - Phase 4 Hardening, object storage receipts, training  
 
 ---
@@ -234,12 +239,12 @@ AVAILABLE ──select──► PENDING_PAYMENT ──manager approve──► O
 - [x] My bookings  
 - [x] Cron: expire stale PENDING  
 
-### Phase 3 — Manager workflow
+### Phase 3 — Manager workflow ✅
 
-- [ ] Review queue  
-- [ ] Approve / Reject + audit log  
-- [ ] Dashboard counts (interactive queue; read-only counts already exist)  
-- [ ] Race-safe approve/reject  
+- [x] Review queue  
+- [x] Approve / Reject + audit log  
+- [x] Dashboard counts + ready-to-review list  
+- [x] Race-safe approve/reject  
 
 ### Phase 4 — Hardening & launch
 
@@ -297,4 +302,4 @@ RETURNING *;
 2. ~~`drizzle.config.ts` + full schema~~ ✅  
 3. ~~Migration + seed~~ ✅  
 4. ~~Auth + role middleware~~ ✅  
-5. ~~Admin CMS~~ ✅ → ~~Resident booking~~ ✅ → **Manager review** → Public polish
+5. ~~Admin CMS~~ ✅ → ~~Resident booking~~ ✅ → ~~Manager review~~ ✅ → **Hardening / polish**

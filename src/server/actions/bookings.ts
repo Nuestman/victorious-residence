@@ -22,10 +22,15 @@ export type BookingActionState = {
   success?: string;
 };
 
-function revalidateBookingPaths() {
+function revalidateBookingPaths(bookingId?: string) {
   revalidatePath("/resident");
   revalidatePath("/resident/bookings");
+  if (bookingId) {
+    revalidatePath(`/resident/bookings/${bookingId}`);
+    revalidatePath(`/manager/reviews/${bookingId}`);
+  }
   revalidatePath("/manager");
+  revalidatePath("/manager/reviews");
   revalidatePath("/admin");
   revalidatePath("/admin/occupancy");
   revalidatePath("/");
@@ -305,4 +310,182 @@ export async function expireStaleBookings(): Promise<number> {
   }
 
   return expired;
+}
+
+export async function approveBookingAction(
+  _prev: BookingActionState,
+  formData: FormData,
+): Promise<BookingActionState> {
+  const session = await requireRole("MANAGER", "/manager/reviews");
+
+  const bookingId = z.string().uuid().safeParse(formData.get("bookingId"));
+  const reviewNote = z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .safeParse(formData.get("reviewNote") || undefined);
+
+  if (!bookingId.success) {
+    return { error: "Invalid booking." };
+  }
+
+  const [current] = await db
+    .select()
+    .from(bookings)
+    .where(eq(bookings.id, bookingId.data))
+    .limit(1);
+
+  if (!current) {
+    return { error: "Booking not found." };
+  }
+
+  if (current.paymentStatus !== "PENDING") {
+    return { error: "This booking was already reviewed." };
+  }
+
+  if (current.expiresAt.getTime() < Date.now()) {
+    await expireBookingById(current.id, "booking.expire_before_approve");
+    revalidateBookingPaths(current.id);
+    return { error: "Hold expired. Bed was released automatically." };
+  }
+
+  if (!current.receiptUrl || !current.paymentReference) {
+    return {
+      error: "Resident must submit payment reference and receipt before approval.",
+    };
+  }
+
+  const [approved] = await db
+    .update(bookings)
+    .set({
+      paymentStatus: "SUCCESS",
+      reviewedById: session.user.id,
+      reviewedAt: new Date(),
+      reviewNote: reviewNote.success ? reviewNote.data || null : null,
+    })
+    .where(
+      and(
+        eq(bookings.id, current.id),
+        eq(bookings.paymentStatus, "PENDING"),
+      ),
+    )
+    .returning({ id: bookings.id, bedSpaceId: bookings.bedSpaceId });
+
+  if (!approved) {
+    return { error: "Another reviewer already processed this booking." };
+  }
+
+  const [occupied] = await db
+    .update(bedSpaces)
+    .set({
+      status: "OCCUPIED",
+      activeBookingId: approved.id,
+    })
+    .where(
+      and(
+        eq(bedSpaces.id, approved.bedSpaceId),
+        eq(bedSpaces.status, "PENDING_PAYMENT"),
+      ),
+    )
+    .returning({ id: bedSpaces.id });
+
+  if (!occupied) {
+    // Booking approved but bed was not in PENDING_PAYMENT — force occupy if still pointing here
+    await db
+      .update(bedSpaces)
+      .set({
+        status: "OCCUPIED",
+        activeBookingId: approved.id,
+      })
+      .where(eq(bedSpaces.id, approved.bedSpaceId));
+  }
+
+  await db.insert(auditLogs).values({
+    actorId: session.user.id,
+    action: "booking.approve",
+    entityType: "booking",
+    entityId: approved.id,
+    metadata: {
+      bedSpaceId: approved.bedSpaceId,
+      paymentReference: current.paymentReference,
+    },
+  });
+
+  revalidateBookingPaths(approved.id);
+  return { success: "Booking approved. Bed is now occupied." };
+}
+
+export async function rejectBookingAction(
+  _prev: BookingActionState,
+  formData: FormData,
+): Promise<BookingActionState> {
+  const session = await requireRole("MANAGER", "/manager/reviews");
+
+  const bookingId = z.string().uuid().safeParse(formData.get("bookingId"));
+  const reviewNote = z
+    .string()
+    .trim()
+    .min(3, "Add a short rejection reason")
+    .max(500)
+    .safeParse(formData.get("reviewNote"));
+
+  if (!bookingId.success) {
+    return { error: "Invalid booking." };
+  }
+  if (!reviewNote.success) {
+    return {
+      error: reviewNote.error.issues[0]?.message ?? "Rejection note required.",
+    };
+  }
+
+  const [rejected] = await db
+    .update(bookings)
+    .set({
+      paymentStatus: "FAILED",
+      reviewedById: session.user.id,
+      reviewedAt: new Date(),
+      reviewNote: reviewNote.data,
+    })
+    .where(
+      and(
+        eq(bookings.id, bookingId.data),
+        eq(bookings.paymentStatus, "PENDING"),
+      ),
+    )
+    .returning({
+      id: bookings.id,
+      bedSpaceId: bookings.bedSpaceId,
+    });
+
+  if (!rejected) {
+    return { error: "This booking was already reviewed or does not exist." };
+  }
+
+  await db
+    .update(bedSpaces)
+    .set({
+      status: "AVAILABLE",
+      activeBookingId: null,
+    })
+    .where(
+      and(
+        eq(bedSpaces.id, rejected.bedSpaceId),
+        eq(bedSpaces.status, "PENDING_PAYMENT"),
+      ),
+    );
+
+  await db.insert(auditLogs).values({
+    actorId: session.user.id,
+    action: "booking.reject",
+    entityType: "booking",
+    entityId: rejected.id,
+    metadata: {
+      bedSpaceId: rejected.bedSpaceId,
+      reviewNote: reviewNote.data,
+    },
+  });
+
+  revalidateBookingPaths(rejected.id);
+  return { success: "Booking rejected. Bed released back to available." };
 }

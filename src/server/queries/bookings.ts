@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import {
@@ -6,6 +6,7 @@ import {
   bookings,
   roomTypes,
   rooms,
+  users,
 } from "@/server/db/schema";
 
 export async function getAvailableBedsForRoomType(roomTypeId: string) {
@@ -115,4 +116,77 @@ export async function getBookingForResident(
     .limit(1);
 
   return row ?? null;
+}
+
+const managerBookingSelect = {
+  id: bookings.id,
+  amount: bookings.amount,
+  paymentStatus: bookings.paymentStatus,
+  paymentReference: bookings.paymentReference,
+  receiptUrl: bookings.receiptUrl,
+  expiresAt: bookings.expiresAt,
+  createdAt: bookings.createdAt,
+  reviewedAt: bookings.reviewedAt,
+  reviewNote: bookings.reviewNote,
+  residentId: bookings.residentId,
+  bedSpaceId: bookings.bedSpaceId,
+  residenceId: bookings.residenceId,
+  bedLabel: bedSpaces.label,
+  bedStatus: bedSpaces.status,
+  roomLabel: rooms.label,
+  roomTypeName: roomTypes.name,
+  residentName: users.fullName,
+  residentEmail: users.email,
+  residentPhone: users.phone,
+};
+
+export async function getManagerReviewQueue(options?: {
+  onlyWithProof?: boolean;
+}) {
+  const conditions = [eq(bookings.paymentStatus, "PENDING")];
+
+  if (options?.onlyWithProof) {
+    conditions.push(isNotNull(bookings.receiptUrl));
+    conditions.push(isNotNull(bookings.paymentReference));
+  }
+
+  return db
+    .select(managerBookingSelect)
+    .from(bookings)
+    .innerJoin(bedSpaces, eq(bookings.bedSpaceId, bedSpaces.id))
+    .innerJoin(rooms, eq(bedSpaces.roomId, rooms.id))
+    .innerJoin(roomTypes, eq(rooms.roomTypeId, roomTypes.id))
+    .innerJoin(users, eq(bookings.residentId, users.id))
+    .where(and(...conditions))
+    .orderBy(
+      sql`case when ${bookings.receiptUrl} is null then 1 else 0 end`,
+      asc(bookings.expiresAt),
+    );
+}
+
+export async function getManagerBooking(bookingId: string) {
+  const [row] = await db
+    .select(managerBookingSelect)
+    .from(bookings)
+    .innerJoin(bedSpaces, eq(bookings.bedSpaceId, bedSpaces.id))
+    .innerJoin(rooms, eq(bedSpaces.roomId, rooms.id))
+    .innerJoin(roomTypes, eq(rooms.roomTypeId, roomTypes.id))
+    .innerJoin(users, eq(bookings.residentId, users.id))
+    .where(eq(bookings.id, bookingId))
+    .limit(1);
+
+  return row ?? null;
+}
+
+export async function getRecentReviewedBookings(limit = 10) {
+  return db
+    .select(managerBookingSelect)
+    .from(bookings)
+    .innerJoin(bedSpaces, eq(bookings.bedSpaceId, bedSpaces.id))
+    .innerJoin(rooms, eq(bedSpaces.roomId, rooms.id))
+    .innerJoin(roomTypes, eq(rooms.roomTypeId, roomTypes.id))
+    .innerJoin(users, eq(bookings.residentId, users.id))
+    .where(sql`${bookings.paymentStatus} in ('SUCCESS', 'FAILED')`)
+    .orderBy(desc(bookings.reviewedAt), desc(bookings.updatedAt))
+    .limit(limit);
 }

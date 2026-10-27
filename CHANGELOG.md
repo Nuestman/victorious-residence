@@ -9,18 +9,22 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 
+- Phase 4 hardening (partial)
+  - Resident self-registration (`/register`) with auto sign-in
+  - Staff training checklist (`docs/training-checklist.md`)
+  - Residents list + detail pages for manager (`/manager/residents`) and admin (`/admin/residents`)
 - Phase 3 manager review workflow
   - Overview with occupancy + ready-to-review counts (`/manager`)
   - Review queue with proof / all-pending filters (`/manager/reviews`)
-  - Booking detail with receipt lightbox-style view
+  - Booking detail with receipt view
   - Race-safe Approve (OCCUPIED) / Reject (release bed) + audit logs
 - Phase 2 resident booking flow
   - Public home live availability counters
   - Browse room types → choose available bed → atomic hold
-  - Payment reference + receipt upload (≤1.5MB image/PDF)
+  - Payment reference + receipt upload (≤1.5MB image/PDF as DB data URLs)
   - My bookings list and booking detail
   - Hourly cron route `/api/cron/expire-bookings` + `vercel.json`
-- `docs/` directory with plan, proposal, and invoice docs
+- `docs/` directory with plan, proposal, invoice, and training docs
 - Root `CHANGELOG.md` and `docs/README.md` index
 
 ### Fixed
@@ -31,7 +35,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Planned
 
-- Phase 4: hardening, object-storage receipts, production polish
+- Soft-launch UAT with Victorious management
+- Object-storage receipts when scaling (kept as Postgres data URLs for launch)
 
 ## [0.2.0] - 2026-10-27
 

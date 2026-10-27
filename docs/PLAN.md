@@ -33,14 +33,19 @@
 - [x] My bookings
 - [x] Cron: expire stale PENDING (`/api/cron/expire-bookings`)
 
-### In progress — Phase 3 Manager workflow
+### Done — Phase 3 Manager workflow
 - [x] Review queue (`/manager/reviews`)
 - [x] Approve / Reject with audit log (`/manager/reviews/[id]`)
 - [x] Dashboard counts + ready-to-review preview
 - [x] Race-safe approve/reject (`UPDATE … WHERE payment_status = 'PENDING'`)
 
-### Not started
-- Phase 4 Hardening, object storage receipts, training  
+### In progress — Phase 4 Hardening & launch
+- [x] Resident self-registration (`/register`)
+- [x] Staff training checklist (`docs/training-checklist.md`)
+- [x] Residents list + detail in manager and admin portals
+- [ ] Soft launch UAT with Victorious management
+- [ ] Change demo passwords / production secrets hygiene
+- Deferred (scale later): S3/Vercel Blob for receipts — **data URLs in `bookings.receipt_url` for launch**
 
 ---
 
@@ -54,7 +59,7 @@
 | Payments (launch) | Upload receipt → manager approve/reject                        | Matches out-of-scope; schema still gateway-ready                       |
 | Tenancy           | Single residence seeded; schema multi-tenant via `residenceId` | Future campuses without rewrite                                        |
 | Auth              | Auth.js credentials + role-gated middleware                    | Simple for Ghana hostel ops; no OAuth dependency                       |
-| Media             | S3-compatible object storage for galleries + receipts          | Receipts must be durable and private                                   |
+| Media / receipts  | **Launch:** data URLs in Postgres (≤1.5MB). **Later:** S3/Blob | Ship without storage vendor; upgrade when volume grows                 |
 
 ---
 
@@ -248,12 +253,11 @@ AVAILABLE ──select──► PENDING_PAYMENT ──manager approve──► O
 
 ### Phase 4 — Hardening & launch
 
-- [ ] Zod everywhere; decimal money  
-- [ ] Access-control tests  
-- [ ] Mobile pass  
-- [ ] Neon + Vercel production  
-- [ ] Training checklist  
-- [ ] Soft launch → December intake  
+- [x] Resident registration  
+- [x] Training checklist  
+- [x] Neon + Vercel staging (production secrets / soft launch remaining)  
+- [ ] Soft launch UAT → December intake  
+- Deferred: object-storage receipts, broader automated access-control suite  
 
 **Buffer:** ~1 week UAT before last week of November.
 
@@ -287,12 +291,12 @@ RETURNING *;
 
 ## 7. Security & ops
 
-- Passwords: bcrypt/argon2 via Auth.js  
-- Receipts: private bucket; signed URLs for managers  
-- Rate-limit register + login  
+- Passwords: bcrypt via Auth.js  
+- Receipts (launch): data URLs in DB; Blob/S3 when scaling  
 - Never trust client `amount` — copy from `room_types.pricePerBed` at booking time  
 - Cron secret header for expire job  
-- Neon PITR backups
+- Neon PITR backups  
+- Follow-on: rate-limit register/login 
 
 ---
 

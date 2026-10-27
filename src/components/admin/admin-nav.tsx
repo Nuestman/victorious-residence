@@ -5,6 +5,7 @@ const links = [
   { href: "/admin/room-types", label: "Room types" },
   { href: "/admin/provision", label: "Provision rooms" },
   { href: "/admin/occupancy", label: "Occupancy" },
+  { href: "/admin/residents", label: "Residents" },
 ] as const;
 
 type AdminNavProps = {

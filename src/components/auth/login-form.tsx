@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 
 import { loginAction, type LoginState } from "@/server/actions/auth";
@@ -66,8 +67,15 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
         </button>
       </form>
 
+      <p className="text-sm text-stone-600">
+        New resident?{" "}
+        <Link href="/register" className="font-medium text-stone-900 underline">
+          Create an account
+        </Link>
+      </p>
+
       <div className="rounded-md border border-stone-200 bg-stone-50 p-3 text-sm text-stone-600">
-        <p className="font-medium text-stone-800">Demo accounts</p>
+        <p className="font-medium text-stone-800">Demo accounts (staging)</p>
         <p className="mt-1">Password for all: <code>ChangeMe123!</code></p>
         <ul className="mt-2 space-y-1">
           {demoAccounts.map((account) => (

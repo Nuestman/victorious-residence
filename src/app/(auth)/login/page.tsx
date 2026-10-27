@@ -34,8 +34,11 @@ async function LoginContent({ searchParams }: LoginPageProps) {
         </Link>
         <h1 className="text-2xl font-semibold text-stone-900">Sign in</h1>
         <p className="text-sm text-stone-600">
-          Use a seeded demo account to open the resident, manager, or admin
-          portals.
+          Residents, managers, and admins sign in here. New applicants can{" "}
+          <Link href="/register" className="font-medium text-stone-900 underline">
+            create a resident account
+          </Link>
+          .
         </p>
       </div>
       <LoginForm callbackUrl={callbackUrl} />

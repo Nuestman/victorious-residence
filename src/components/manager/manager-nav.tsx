@@ -3,6 +3,7 @@ import Link from "next/link";
 const links = [
   { href: "/manager", label: "Overview" },
   { href: "/manager/reviews", label: "Review queue" },
+  { href: "/manager/residents", label: "Residents" },
 ] as const;
 
 type ManagerNavProps = {

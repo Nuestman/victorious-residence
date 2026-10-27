@@ -52,3 +52,4 @@ npm run dev
 - [`docs/PLAN.md`](./docs/PLAN.md) — architecture and phased delivery
 - [`docs/project-proposal.md`](./docs/project-proposal.md) — client scope
 - [`docs/proposed-invoice.md`](./docs/proposed-invoice.md) — commercial terms
+- [`docs/training-checklist.md`](./docs/training-checklist.md) — staff go-live checklist

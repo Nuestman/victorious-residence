@@ -21,11 +21,13 @@ npm run db:push
 npm run db:seed
 ```
 
-4. Start the app:
+4. Start the app (local port **17017**):
 
 ```bash
 npm run dev
 ```
+
+Open http://localhost:17017
 
 ### Demo users (after seed)
 

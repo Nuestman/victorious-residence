@@ -3,9 +3,16 @@
 All notable changes to Victorious Residence are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html) once releases are tagged.
+and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Planned
+
+- Soft-launch UAT with Victorious management
+- Object-storage receipts when scaling (kept as Postgres data URLs for launch)
+
+## [0.3.0] - 2026-10-27
 
 ### Added
 
@@ -27,16 +34,15 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - `docs/` directory with plan, proposal, invoice, and training docs
 - Root `CHANGELOG.md` and `docs/README.md` index
 
+### Changed
+
+- Local/production Node server default port set to `17017` (`npm run dev` / `npm start`)
+
 ### Fixed
 
 - Vercel/production TypeScript build failures in Auth.js JWT module augmentation
 - Lazy database client so builds do not require `DATABASE_URL` at import time
 - Dependabot alert: force transitive `esbuild` to `>=0.25.0` via npm `overrides`
-
-### Planned
-
-- Soft-launch UAT with Victorious management
-- Object-storage receipts when scaling (kept as Postgres data URLs for launch)
 
 ## [0.2.0] - 2026-10-27
 
@@ -69,6 +75,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Project proposal, invoice draft, and architecture plan
 - Environment template (`.env.example`)
 
-[Unreleased]: https://github.com/Nuestman/victorious-residence/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Nuestman/victorious-residence/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Nuestman/victorious-residence/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Nuestman/victorious-residence/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Nuestman/victorious-residence/releases/tag/v0.1.0

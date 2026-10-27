@@ -19,8 +19,18 @@ function createDb(): Database {
   return drizzle(neon(databaseUrl), { schema });
 }
 
-export const db: Database = globalForDb.victoriousDb ?? createDb();
+function getDb(): Database {
+  if (!globalForDb.victoriousDb) {
+    globalForDb.victoriousDb = createDb();
+  }
 
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.victoriousDb = db;
+  return globalForDb.victoriousDb;
 }
+
+/** Lazy proxy so `next build` can import modules without requiring DATABASE_URL. */
+export const db = new Proxy({} as Database, {
+  get(_target, property, receiver) {
+    const value = Reflect.get(getDb(), property, receiver);
+    return typeof value === "function" ? value.bind(getDb()) : value;
+  },
+});

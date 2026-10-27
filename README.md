@@ -48,6 +48,7 @@ npm run dev
 
 ## Docs
 
-- `PLAN.md` — architecture and phased delivery
-- `project-proposal.md` — client scope
-- `proposed-invoice.md` — commercial terms
+- [`CHANGELOG.md`](./CHANGELOG.md) — release history
+- [`docs/PLAN.md`](./docs/PLAN.md) — architecture and phased delivery
+- [`docs/project-proposal.md`](./docs/project-proposal.md) — client scope
+- [`docs/proposed-invoice.md`](./docs/proposed-invoice.md) — commercial terms

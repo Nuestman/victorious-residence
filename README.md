@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Victorious Residence
 
-## Getting Started
+Production hostel inventory, resident booking, and payment-review system.
 
-First, run the development server:
+**Stack:** Next.js · Drizzle · PostgreSQL (Neon) · Auth.js · Tailwind
+
+## Setup
+
+1. Copy env template and fill values:
+
+```bash
+cp .env.example .env.local
+```
+
+2. Set `DATABASE_URL` (Neon) and `AUTH_SECRET` (`openssl rand -base64 32`).
+
+3. Push schema and seed demo data:
+
+```bash
+npm run db:push
+npm run db:seed
+```
+
+4. Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Demo users (after seed)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Email | Role | Password |
+| :--- | :--- | :--- |
+| `admin@victorious.local` | ADMIN | `ChangeMe123!` |
+| `manager@victorious.local` | MANAGER | `ChangeMe123!` |
+| `resident@victorious.local` | RESIDENT | `ChangeMe123!` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Scripts
 
-## Learn More
+| Script | Purpose |
+| :--- | :--- |
+| `npm run dev` | Local Next.js server |
+| `npm run db:generate` | Generate Drizzle migrations |
+| `npm run db:push` | Push schema to Neon (dev) |
+| `npm run db:migrate` | Apply migrations |
+| `npm run db:seed` | Seed residence, users, room types, beds |
+| `npm run db:studio` | Drizzle Studio |
 
-To learn more about Next.js, take a look at the following resources:
+## Docs
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `PLAN.md` — architecture and phased delivery
+- `project-proposal.md` — client scope
+- `proposed-invoice.md` — commercial terms

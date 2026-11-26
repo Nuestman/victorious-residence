@@ -56,8 +56,10 @@ Open http://localhost:17017
 | `npm run dev` | Local Next.js server |
 | `npm run db:generate` | Generate Drizzle migrations |
 | `npm run db:push` | Push schema to Neon (dev) |
-| `npm run db:migrate` | Apply migrations |
+| `npm run db:migrate` | Apply migrations (clean history) |
+| `npm run db:sync` | Apply / record migrations safely after `db:push` hybrids |
 | `npm run db:seed` | Seed residence, users, room types, beds |
+| `npm run db:seed:migrate` | Run idempotent content/seed migrations |
 | `npm run db:studio` | Drizzle Studio |
 
 ## Docs

@@ -1,6 +1,9 @@
 /**
  * Mark already-applied schema migrations in __drizzle_migrations when the DB
  * was created with db:push (empty migration history).
+ *
+ * Prefer `npm run db:sync` (`scripts/sync-migrations.mjs`) — it applies any
+ * missing SQL (tolerating "already exists") and records every journal entry.
  */
 import crypto from "node:crypto";
 import fs from "node:fs";

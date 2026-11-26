@@ -36,6 +36,13 @@
       "when": 1795619436528,
       "tag": "0004_contact_inquiry_replies",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795666667739,
+      "tag": "0005_booking_amount_paid",
+      "breakpoints": true
     }
   ]
 }

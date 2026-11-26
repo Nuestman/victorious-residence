@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Fixed
+
+- Add missing `0005_booking_amount_paid` migration so schema, Drizzle history, and deposit/balance UI stay aligned
+- `npm run db:sync` applies pending SQL safely on DBs previously evolved with `db:push`
+
 ### Planned
 
 - Soft-launch UAT with Victorious management

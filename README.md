@@ -15,20 +15,30 @@ Production hostel inventory, resident booking, and payment-review system.
 - Admin audit log UI
 - App version in portal sidebar footer
 
+## Branches
+
+| Git | Neon | Purpose |
+| :--- | :--- | :--- |
+| `development` | `development` | Local development |
+| `master` | production / staging | Deployed staging & production |
+
+After a `development` → `master` merge (or any push to `master`), Actions resets `development` to match `master`. Details: [`docs/local-development.md`](./docs/local-development.md).
+
 ## Setup
 
-1. Copy env template and fill values:
+1. Use the Git `development` branch and Neon **development** DB branch (not production):
 
 ```bash
+git checkout development
 cp .env.example .env.local
 ```
 
-2. Set `DATABASE_URL` (Neon) and `AUTH_SECRET` (`openssl rand -base64 32`).
+2. Set `DATABASE_URL` to the Neon **development** connection string, plus `AUTH_SECRET` (`openssl rand -base64 32`).
 
-3. Push schema and seed demo data:
+3. Sync schema and seed demo data:
 
 ```bash
-npm run db:push
+npm run db:sync
 npm run db:seed
 ```
 

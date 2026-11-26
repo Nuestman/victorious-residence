@@ -7,6 +7,11 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Git `development` branch + Neon development DB local workflow (`docs/local-development.md`)
+- GitHub Action `sync-development.yml` resets `development` to `master` after merges/pushes to avoid ahead/behind drift
+
 ### Fixed
 
 - Add missing `0005_booking_amount_paid` migration so schema, Drizzle history, and deposit/balance UI stay aligned

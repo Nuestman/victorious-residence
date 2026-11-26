@@ -2,6 +2,7 @@
 
 Living backlog for work **after** the November launch baseline.  
 Current shipped app version: **`0.4.0`** (Phases 0–5 + public site / deposit / balances / audit).  
+Local work: Git + Neon **`development`** branches — see [local-development.md](./local-development.md).  
 Schema notes: **ready** = tables/FKs already support it; **partial** = some pieces exist; **new** = needs schema or integrations.
 
 Priorities: **P0** next build · **P1** soon after soft launch · **P2** follow-on product · **P3** scale / polish.

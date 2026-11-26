@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ManagerNav } from "@/components/manager/manager-nav";
 import { ReviewActionsForm } from "@/components/manager/review-actions-form";
 import { PortalShell } from "@/components/portal-shell";
+import { PaymentBalanceSummary } from "@/components/staff/payment-balance-summary";
+import { PaymentReminderButton } from "@/components/staff/payment-reminder-button";
+import { getPaymentBalance } from "@/lib/booking";
 import { expireBookingById } from "@/server/actions/bookings";
 import { requireRole } from "@/server/auth/guards";
 import { getManagerBooking } from "@/server/queries/bookings";
@@ -27,6 +29,7 @@ export default async function ManagerReviewDetailPage({
 
   if (
     booking.paymentStatus === "PENDING" &&
+    !booking.receiptUrl &&
     booking.expiresAt.getTime() < Date.now()
   ) {
     await expireBookingById(booking.id, "booking.expire_on_manager_view");
@@ -36,18 +39,20 @@ export default async function ManagerReviewDetailPage({
     }
   }
 
-  const hasProof = Boolean(booking.receiptUrl && booking.paymentReference);
+  const hasProof = Boolean(
+    booking.receiptUrl && booking.paymentReference && booking.amountPaid,
+  );
   const canReview = booking.paymentStatus === "PENDING";
+  const balance = getPaymentBalance(booking.amount, booking.amountPaid);
 
   return (
     <PortalShell
       title={`${booking.roomLabel}-${booking.bedLabel}`}
-      description={`${booking.roomTypeName} · GHS ${booking.amount}`}
+      description={`${booking.roomTypeName} · ${balance.label}`}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <ManagerNav currentPath="/manager/reviews" />
       <Link
         href="/manager/reviews"
         className="text-sm text-stone-500 hover:text-stone-800"
@@ -82,9 +87,13 @@ export default async function ManagerReviewDetailPage({
           </dd>
         </div>
         <div>
-          <dt className="text-stone-500">Hold expires</dt>
+          <dt className="text-stone-500">
+            {booking.receiptUrl ? "Reservation" : "Application due"}
+          </dt>
           <dd className="font-medium text-stone-900">
-            {booking.expiresAt.toLocaleString()}
+            {booking.receiptUrl
+              ? "Held until approve / reject (deposit non-refundable)"
+              : booking.expiresAt.toLocaleString()}
           </dd>
         </div>
         {booking.reviewNote ? (
@@ -95,9 +104,22 @@ export default async function ManagerReviewDetailPage({
         ) : null}
       </dl>
 
+      <section className="space-y-3">
+        <h2 className="text-lg font-medium text-stone-900">Payment tracking</h2>
+        <PaymentBalanceSummary
+          amount={booking.amount}
+          amountPaid={booking.amountPaid}
+        />
+        <PaymentReminderButton
+          bookingId={booking.id}
+          remaining={balance.remaining}
+          residentEmail={booking.residentEmail}
+        />
+      </section>
+
       {booking.receiptUrl ? (
         <section className="space-y-2">
-          <h2 className="text-lg font-medium text-stone-900">Receipt</h2>
+          <h2 className="text-lg font-medium text-stone-900">Deposit receipt</h2>
           {booking.receiptUrl.startsWith("data:image/") ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -116,7 +138,8 @@ export default async function ManagerReviewDetailPage({
         </section>
       ) : (
         <p className="text-sm text-amber-800">
-          No receipt uploaded yet. You can still reject the hold if needed.
+          No deposit receipt yet — the bed is not reserved. You can close the
+          application if needed.
         </p>
       )}
 

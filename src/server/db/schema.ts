@@ -16,6 +16,7 @@ import {
 
 export const userRoleEnum = pgEnum("user_role", [
   "RESIDENT",
+  "STAFF",
   "MANAGER",
   "ADMIN",
 ]);
@@ -32,6 +33,11 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "FAILED",
 ]);
 
+export const residenceMediaKindEnum = pgEnum("residence_media_kind", [
+  "EXTERIOR",
+  "FACILITY",
+]);
+
 export const residences = pgTable(
   "residences",
   {
@@ -40,6 +46,8 @@ export const residences = pgTable(
     slug: text("slug").notNull(),
     address: text("address").notNull(),
     description: text("description"),
+    phone: text("phone"),
+    email: text("email"),
     heroImageUrl: text("hero_image_url"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true })
@@ -61,6 +69,12 @@ export const users = pgTable(
     passwordHash: text("password_hash").notNull(),
     fullName: text("full_name").notNull(),
     phone: text("phone"),
+    nationalId: text("national_id"),
+    studentId: text("student_id"),
+    hometown: text("hometown"),
+    emergencyContactName: text("emergency_contact_name"),
+    emergencyContactPhone: text("emergency_contact_phone"),
+    avatarUrl: text("avatar_url"),
     role: userRoleEnum("role").notNull().default("RESIDENT"),
     residenceId: uuid("residence_id").references(() => residences.id, {
       onDelete: "set null",
@@ -87,6 +101,9 @@ export const residenceMedia = pgTable(
     residenceId: uuid("residence_id")
       .notNull()
       .references(() => residences.id, { onDelete: "cascade" }),
+    kind: residenceMediaKindEnum("kind").notNull().default("EXTERIOR"),
+    title: text("title"),
+    description: text("description"),
     url: text("url").notNull(),
     caption: text("caption"),
     sortOrder: integer("sort_order").notNull().default(0),
@@ -131,6 +148,25 @@ export const roomTypes = pgTable(
       table.residenceId,
       table.isActive,
     ),
+  ],
+);
+
+export const roomTypeMedia = pgTable(
+  "room_type_media",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    roomTypeId: uuid("room_type_id")
+      .notNull()
+      .references(() => roomTypes.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    caption: text("caption"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("room_type_media_room_type_id_idx").on(table.roomTypeId),
   ],
 );
 
@@ -213,11 +249,14 @@ export const bookings = pgTable(
       .notNull()
       .references(() => residences.id, { onDelete: "restrict" }),
     amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
+    /** Declared partial/full payment on the uploaded receipt (GHS). */
+    amountPaid: numeric("amount_paid", { precision: 12, scale: 2 }),
     paymentReference: text("payment_reference"),
     paymentStatus: paymentStatusEnum("payment_status")
       .notNull()
       .default("PENDING"),
     receiptUrl: text("receipt_url"),
+    /** Soft abandon deadline for unpaid applications (no inventory lock). */
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     reviewedById: uuid("reviewed_by_id").references(() => users.id, {
       onDelete: "set null",
@@ -273,12 +312,77 @@ export const auditLogs = pgTable(
   ],
 );
 
+export const contactInquiryStatusEnum = pgEnum("contact_inquiry_status", [
+  "NEW",
+  "READ",
+  "ARCHIVED",
+]);
+
+export const contactInquiries = pgTable(
+  "contact_inquiries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    residenceId: uuid("residence_id").references(() => residences.id, {
+      onDelete: "set null",
+    }),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone"),
+    subject: text("subject"),
+    message: text("message").notNull(),
+    status: contactInquiryStatusEnum("status").notNull().default("NEW"),
+    emailSentAt: timestamp("email_sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("contact_inquiries_status_created_idx").on(
+      table.status,
+      table.createdAt,
+    ),
+    index("contact_inquiries_residence_created_idx").on(
+      table.residenceId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const contactInquiryReplies = pgTable(
+  "contact_inquiry_replies",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    inquiryId: uuid("inquiry_id")
+      .notNull()
+      .references(() => contactInquiries.id, { onDelete: "cascade" }),
+    authorId: uuid("author_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    body: text("body").notNull(),
+    emailSentAt: timestamp("email_sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("contact_inquiry_replies_inquiry_created_idx").on(
+      table.inquiryId,
+      table.createdAt,
+    ),
+  ],
+);
+
 export const residencesRelations = relations(residences, ({ many }) => ({
   users: many(users),
   media: many(residenceMedia),
   roomTypes: many(roomTypes),
   rooms: many(rooms),
   bookings: many(bookings),
+  contactInquiries: many(contactInquiries),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -303,6 +407,14 @@ export const roomTypesRelations = relations(roomTypes, ({ one, many }) => ({
     references: [residences.id],
   }),
   rooms: many(rooms),
+  media: many(roomTypeMedia),
+}));
+
+export const roomTypeMediaRelations = relations(roomTypeMedia, ({ one }) => ({
+  roomType: one(roomTypes, {
+    fields: [roomTypeMedia.roomTypeId],
+    references: [roomTypes.id],
+  }),
 }));
 
 export const roomsRelations = relations(rooms, ({ one, many }) => ({
@@ -358,6 +470,31 @@ export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
   }),
 }));
 
+export const contactInquiriesRelations = relations(
+  contactInquiries,
+  ({ one, many }) => ({
+    residence: one(residences, {
+      fields: [contactInquiries.residenceId],
+      references: [residences.id],
+    }),
+    replies: many(contactInquiryReplies),
+  }),
+);
+
+export const contactInquiryRepliesRelations = relations(
+  contactInquiryReplies,
+  ({ one }) => ({
+    inquiry: one(contactInquiries, {
+      fields: [contactInquiryReplies.inquiryId],
+      references: [contactInquiries.id],
+    }),
+    author: one(users, {
+      fields: [contactInquiryReplies.authorId],
+      references: [users.id],
+    }),
+  }),
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Residence = typeof residences.$inferSelect;
@@ -365,6 +502,20 @@ export type RoomType = typeof roomTypes.$inferSelect;
 export type Room = typeof rooms.$inferSelect;
 export type BedSpace = typeof bedSpaces.$inferSelect;
 export type Booking = typeof bookings.$inferSelect;
+export type ContactInquiry = typeof contactInquiries.$inferSelect;
+export type ContactInquiryReply = typeof contactInquiryReplies.$inferSelect;
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type BedSpaceStatus = (typeof bedSpaceStatusEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
+export type ResidenceMediaKind =
+  (typeof residenceMediaKindEnum.enumValues)[number];
+export type ContactInquiryStatus =
+  (typeof contactInquiryStatusEnum.enumValues)[number];
+
+/** Tracks applied data/seed migrations (separate from Drizzle schema migrations). */
+export const seedMigrations = pgTable("seed_migrations", {
+  id: text("id").primaryKey(),
+  appliedAt: timestamp("applied_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

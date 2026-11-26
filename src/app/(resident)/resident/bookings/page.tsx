@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { PortalShell } from "@/components/portal-shell";
-import { ResidentNav } from "@/components/resident/resident-nav";
 import { requireRole } from "@/server/auth/guards";
 import { getResidentBookings } from "@/server/queries/bookings";
 
@@ -20,12 +19,11 @@ export default async function ResidentBookingsPage() {
   return (
     <PortalShell
       title="My bookings"
-      description="Track holds, payment proof, and allocation status."
+      description="Track deposit payments, reservations, and allocation status."
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <ResidentNav currentPath="/resident/bookings" />
 
       {rows.length === 0 ? (
         <p className="text-sm text-stone-600">
@@ -48,8 +46,11 @@ export default async function ResidentBookingsPage() {
                 </p>
                 <p className="text-sm text-stone-500">
                   {statusLabel[row.paymentStatus]} · GHS {row.amount}
-                  {row.paymentStatus === "PENDING"
-                    ? ` · expires ${row.expiresAt.toLocaleString()}`
+                  {row.paymentStatus === "PENDING" && row.receiptUrl
+                    ? ` · deposit GHS ${row.amountPaid ?? "—"} (reserved)`
+                    : null}
+                  {row.paymentStatus === "PENDING" && !row.receiptUrl
+                    ? ` · deposit due by ${row.expiresAt.toLocaleString()}`
                     : null}
                 </p>
               </div>

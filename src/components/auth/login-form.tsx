@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { PortalIcon } from "@/components/portal-icons";
 import { loginAction, type LoginState } from "@/server/actions/auth";
 
 const initialState: LoginState = {};
@@ -10,6 +11,7 @@ const initialState: LoginState = {};
 const demoAccounts = [
   { email: "admin@victorious.local", role: "ADMIN" },
   { email: "manager@victorious.local", role: "MANAGER" },
+  { email: "staff@victorious.local", role: "STAFF" },
   { email: "resident@victorious.local", role: "RESIDENT" },
 ] as const;
 
@@ -61,8 +63,9 @@ export function LoginForm({ callbackUrl }: LoginFormProps) {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-md bg-stone-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-stone-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
+          <PortalIcon name="login" className="h-4 w-4" />
           {pending ? "Signing in…" : "Sign in"}
         </button>
       </form>

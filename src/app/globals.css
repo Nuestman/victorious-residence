@@ -1,26 +1,42 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f1e8;
+  --foreground: #1c1917;
+  --cream: #f6f1e8;
+  --ink: #1c1917;
+  --forest: #1f3d32;
+  --brass: #8c6a3d;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-cream: var(--cream);
+  --color-ink: var(--ink);
+  --color-forest: var(--forest);
+  --color-brass: var(--brass);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+[role="button"] {
+  cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
 }

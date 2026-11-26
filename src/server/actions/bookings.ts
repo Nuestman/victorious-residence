@@ -1,11 +1,16 @@
 "use server";
 
-import { and, eq, lt, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { bookingExpiresAt } from "@/lib/booking";
+import {
+  applicationAbandonsAt,
+  meetsReservationDeposit,
+  MIN_RESERVATION_DEPOSIT_GHS,
+  parseMoneyAmount,
+} from "@/lib/booking";
 import { storeReceipt } from "@/lib/receipts";
 import { requireRole } from "@/server/auth/guards";
 import { db } from "@/server/db";
@@ -36,6 +41,10 @@ function revalidateBookingPaths(bookingId?: string) {
   revalidatePath("/");
 }
 
+/**
+ * Start a booking application for a bed.
+ * Does NOT reserve inventory — reservation happens after a ≥ GHS 1000 deposit proof.
+ */
 export async function holdBedAction(
   _prev: BookingActionState,
   formData: FormData,
@@ -61,7 +70,7 @@ export async function holdBedAction(
   if (activeHold) {
     return {
       error:
-        "You already have a pending booking. Complete payment or wait for it to expire before holding another bed.",
+        "You already have a pending booking. Pay the non-refundable deposit (GHS 1,000+) or wait for that application to close before choosing another bed.",
     };
   }
 
@@ -89,47 +98,29 @@ export async function holdBedAction(
     return { error: "That bed is no longer available." };
   }
 
-  const [held] = await db
-    .update(bedSpaces)
-    .set({
-      status: "PENDING_PAYMENT",
-    })
-    .where(
-      and(
-        eq(bedSpaces.id, bedSpaceId.data),
-        eq(bedSpaces.status, "AVAILABLE"),
-      ),
-    )
-    .returning({ id: bedSpaces.id });
-
-  if (!held) {
-    return { error: "That bed was just taken. Pick another." };
-  }
-
   try {
     const [booking] = await db
       .insert(bookings)
       .values({
         residentId: session.user.id,
-        bedSpaceId: held.id,
+        bedSpaceId: bedContext.bedId,
         residenceId: bedContext.residenceId,
         amount: bedContext.pricePerBed,
         paymentStatus: "PENDING",
-        expiresAt: bookingExpiresAt(),
+        expiresAt: applicationAbandonsAt(),
       })
       .returning({ id: bookings.id });
 
-    await db
-      .update(bedSpaces)
-      .set({ activeBookingId: booking.id })
-      .where(eq(bedSpaces.id, held.id));
-
     await db.insert(auditLogs).values({
       actorId: session.user.id,
-      action: "booking.hold",
+      action: "booking.application",
       entityType: "booking",
       entityId: booking.id,
-      metadata: { bedSpaceId: held.id, amount: bedContext.pricePerBed },
+      metadata: {
+        bedSpaceId: bedContext.bedId,
+        amount: bedContext.pricePerBed,
+        minDepositGhs: MIN_RESERVATION_DEPOSIT_GHS,
+      },
     });
 
     revalidateBookingPaths();
@@ -144,13 +135,8 @@ export async function holdBedAction(
       throw error;
     }
 
-    await db
-      .update(bedSpaces)
-      .set({ status: "AVAILABLE", activeBookingId: null })
-      .where(eq(bedSpaces.id, held.id));
-
     console.error(error);
-    return { error: "Could not create booking. Please try again." };
+    return { error: "Could not start booking. Please try again." };
   }
 }
 
@@ -167,6 +153,11 @@ export async function submitPaymentProofAction(
     .min(4, "Enter the MoMo/bank reference")
     .max(80)
     .safeParse(formData.get("paymentReference"));
+  const amountPaidRaw = z
+    .string()
+    .trim()
+    .min(1, "Enter how much you paid")
+    .safeParse(formData.get("amountPaid"));
 
   if (!bookingId.success) {
     return { error: "Invalid booking." };
@@ -174,6 +165,21 @@ export async function submitPaymentProofAction(
   if (!paymentReference.success) {
     return {
       error: paymentReference.error.issues[0]?.message ?? "Invalid reference.",
+    };
+  }
+  if (!amountPaidRaw.success) {
+    return {
+      error: amountPaidRaw.error.issues[0]?.message ?? "Enter the amount paid.",
+    };
+  }
+
+  const amountPaid = parseMoneyAmount(amountPaidRaw.data);
+  if (amountPaid === null) {
+    return { error: "Enter a valid payment amount in GHS." };
+  }
+  if (!meetsReservationDeposit(amountPaid)) {
+    return {
+      error: `A non-refundable deposit of at least GHS ${MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH")} is required to reserve a bed.`,
     };
   }
 
@@ -201,11 +207,29 @@ export async function submitPaymentProofAction(
     return { error: "This booking can no longer accept payment proof." };
   }
 
-  if (booking.expiresAt.getTime() < Date.now()) {
+  if (booking.receiptUrl) {
+    return {
+      error:
+        "Deposit proof is already on file for this booking. Wait for manager review.",
+    };
+  }
+
+  if (
+    !booking.receiptUrl &&
+    booking.expiresAt.getTime() < Date.now()
+  ) {
     await expireBookingById(booking.id, "system.auto_expire_on_submit");
     revalidateBookingPaths();
     return {
-      error: "This hold has expired. Choose another bed and try again.",
+      error:
+        "This application expired before a deposit was submitted. Choose another bed and try again.",
+    };
+  }
+
+  const fullAmount = parseMoneyAmount(booking.amount) ?? 0;
+  if (amountPaid > fullAmount + 0.001) {
+    return {
+      error: `Amount paid cannot exceed the bed price (GHS ${booking.amount}).`,
     };
   }
 
@@ -214,27 +238,69 @@ export async function submitPaymentProofAction(
     return { error: stored.error };
   }
 
-  await db
-    .update(bookings)
+  const amountPaidStr = amountPaid.toFixed(2);
+
+  const [held] = await db
+    .update(bedSpaces)
     .set({
-      paymentReference: paymentReference.data,
-      receiptUrl: stored.url,
+      status: "PENDING_PAYMENT",
+      activeBookingId: booking.id,
     })
-    .where(eq(bookings.id, booking.id));
+    .where(
+      and(
+        eq(bedSpaces.id, booking.bedSpaceId),
+        eq(bedSpaces.status, "AVAILABLE"),
+      ),
+    )
+    .returning({ id: bedSpaces.id });
 
-  await db.insert(auditLogs).values({
-    actorId: session.user.id,
-    action: "booking.payment_proof",
-    entityType: "booking",
-    entityId: booking.id,
-    metadata: { paymentReference: paymentReference.data },
-  });
+  if (!held) {
+    return {
+      error:
+        "That bed was reserved by someone else before your deposit could be recorded. Contact management if you already paid — deposits are non-refundable once accepted, and staff will help reassign or apply it.",
+    };
+  }
 
-  revalidateBookingPaths();
-  return {
-    success:
-      "Payment proof submitted. A manager will review and confirm your bed.",
-  };
+  try {
+    await db
+      .update(bookings)
+      .set({
+        paymentReference: paymentReference.data,
+        receiptUrl: stored.url,
+        amountPaid: amountPaidStr,
+      })
+      .where(eq(bookings.id, booking.id));
+
+    await db.insert(auditLogs).values({
+      actorId: session.user.id,
+      action: "booking.deposit_proof",
+      entityType: "booking",
+      entityId: booking.id,
+      metadata: {
+        paymentReference: paymentReference.data,
+        amountPaid: amountPaidStr,
+        minDepositGhs: MIN_RESERVATION_DEPOSIT_GHS,
+      },
+    });
+
+    revalidateBookingPaths(booking.id);
+    return {
+      success: `Deposit proof submitted (GHS ${amountPaidStr}). Your bed is now reserved pending manager confirmation. This deposit is non-refundable.`,
+    };
+  } catch (error) {
+    await db
+      .update(bedSpaces)
+      .set({ status: "AVAILABLE", activeBookingId: null })
+      .where(
+        and(
+          eq(bedSpaces.id, booking.bedSpaceId),
+          eq(bedSpaces.status, "PENDING_PAYMENT"),
+          eq(bedSpaces.activeBookingId, booking.id),
+        ),
+      );
+    console.error(error);
+    return { error: "Could not save payment proof. Please try again." };
+  }
 }
 
 export async function expireBookingById(
@@ -253,15 +319,21 @@ export async function expireBookingById(
     return false;
   }
 
+  // Deposit already submitted → bed is reserved; do not auto-release.
+  if (booking.receiptUrl) {
+    return false;
+  }
+
   await db
     .update(bookings)
     .set({
       paymentStatus: "FAILED",
-      reviewNote: "Hold expired before payment was approved.",
+      reviewNote: "Application closed before a reservation deposit was submitted.",
       reviewedAt: new Date(),
     })
     .where(eq(bookings.id, booking.id));
 
+  // Only release if this booking had somehow locked the bed (legacy holds).
   await db
     .update(bedSpaces)
     .set({
@@ -272,6 +344,7 @@ export async function expireBookingById(
       and(
         eq(bedSpaces.id, booking.bedSpaceId),
         eq(bedSpaces.status, "PENDING_PAYMENT"),
+        eq(bedSpaces.activeBookingId, booking.id),
       ),
     );
 
@@ -293,6 +366,7 @@ export async function expireStaleBookings(): Promise<number> {
     .where(
       and(
         eq(bookings.paymentStatus, "PENDING"),
+        isNull(bookings.receiptUrl),
         lt(bookings.expiresAt, sql`now()`),
       ),
     );
@@ -344,15 +418,17 @@ export async function approveBookingAction(
     return { error: "This booking was already reviewed." };
   }
 
-  if (current.expiresAt.getTime() < Date.now()) {
-    await expireBookingById(current.id, "booking.expire_before_approve");
-    revalidateBookingPaths(current.id);
-    return { error: "Hold expired. Bed was released automatically." };
+  if (!current.receiptUrl || !current.paymentReference || !current.amountPaid) {
+    return {
+      error:
+        "Resident must submit a deposit of at least GHS 1,000 with reference and receipt before approval.",
+    };
   }
 
-  if (!current.receiptUrl || !current.paymentReference) {
+  const paid = parseMoneyAmount(current.amountPaid);
+  if (paid === null || !meetsReservationDeposit(paid)) {
     return {
-      error: "Resident must submit payment reference and receipt before approval.",
+      error: `Recorded deposit must be at least GHS ${MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH")}.`,
     };
   }
 
@@ -391,7 +467,6 @@ export async function approveBookingAction(
     .returning({ id: bedSpaces.id });
 
   if (!occupied) {
-    // Booking approved but bed was not in PENDING_PAYMENT — force occupy if still pointing here
     await db
       .update(bedSpaces)
       .set({
@@ -409,11 +484,15 @@ export async function approveBookingAction(
     metadata: {
       bedSpaceId: approved.bedSpaceId,
       paymentReference: current.paymentReference,
+      amountPaid: current.amountPaid,
     },
   });
 
   revalidateBookingPaths(approved.id);
-  return { success: "Booking approved. Bed is now occupied." };
+  return {
+    success:
+      "Booking approved. Bed is occupied. Confirm any remaining balance with the resident offline if needed.",
+  };
 }
 
 export async function rejectBookingAction(
@@ -487,5 +566,8 @@ export async function rejectBookingAction(
   });
 
   revalidateBookingPaths(rejected.id);
-  return { success: "Booking rejected. Bed released back to available." };
+  return {
+    success:
+      "Booking rejected and bed released. Apply your deposit policy offline — accepted deposits are non-refundable.",
+  };
 }

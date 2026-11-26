@@ -36,4 +36,4 @@ The following are excluded from the November launch but the database and app str
 ### 5. Technical foundation
 * **Next.js** application with role-based access (`RESIDENT`, `MANAGER`, `ADMIN`).
 * **PostgreSQL** via **Drizzle ORM**, multi-tenant-ready (`Residence` → `RoomType` → `Room` → `BedSpace`, plus `Booking` ledger).
-* Manual payment verification workflow with time-limited bed holds to prevent double-booking.
+* Manual payment verification workflow with a non-refundable deposit (≥ GHS 1,000) required before a bed is reserved.

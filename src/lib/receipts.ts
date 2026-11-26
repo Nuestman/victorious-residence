@@ -5,7 +5,10 @@ const ALLOWED_TYPES = new Set([
   "application/pdf",
 ]);
 
-const MAX_BYTES = 1_500_000; // ~1.5MB
+/** Max receipt upload size (bytes). */
+export const RECEIPT_MAX_BYTES = 5 * 1024 * 1024; // 5MB
+
+export const RECEIPT_MAX_LABEL = "5MB";
 
 export type ReceiptStoreResult =
   | { ok: true; url: string }
@@ -23,10 +26,10 @@ export async function storeReceipt(file: File): Promise<ReceiptStoreResult> {
     };
   }
 
-  if (file.size <= 0 || file.size > MAX_BYTES) {
+  if (file.size <= 0 || file.size > RECEIPT_MAX_BYTES) {
     return {
       ok: false,
-      error: "Receipt must be under 1.5MB.",
+      error: `Receipt must be under ${RECEIPT_MAX_LABEL}.`,
     };
   }
 

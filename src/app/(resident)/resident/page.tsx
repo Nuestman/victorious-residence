@@ -3,8 +3,8 @@ import { count } from "drizzle-orm";
 import { Suspense } from "react";
 
 import { PortalShell } from "@/components/portal-shell";
-import { ResidentNav } from "@/components/resident/resident-nav";
-import { getBookingHoldHours } from "@/lib/booking";
+import { RoomCard } from "@/components/site/room-card";
+import { MIN_RESERVATION_DEPOSIT_GHS } from "@/lib/booking";
 import { requireRole } from "@/server/auth/guards";
 import { db } from "@/server/db";
 import { bedSpaces } from "@/server/db/schema";
@@ -28,62 +28,64 @@ async function ResidentContent() {
   return (
     <PortalShell
       title="Resident portal"
-      description={`Browse types, hold a bed for ${getBookingHoldHours()} hours, then upload proof of payment.`}
+      description={`Choose a bed, then reserve it with a non-refundable deposit of at least GHS ${MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH")}.`}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <ResidentNav currentPath="/resident" />
 
       {pendingBooking ? (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          You have a pending hold on {pendingBooking.roomLabel}-
+          You have a pending booking for {pendingBooking.roomLabel}-
           {pendingBooking.bedLabel}.{" "}
           <Link
             href={`/resident/bookings/${pendingBooking.id}`}
             className="font-medium underline"
           >
-            Complete payment proof
-          </Link>{" "}
-          before it expires.
+            {pendingBooking.receiptUrl
+              ? "View deposit status"
+              : "Pay the GHS " +
+                MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH") +
+                "+ deposit to reserve"}
+          </Link>
+          .
         </div>
       ) : null}
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-medium text-stone-900">
+      <section className="space-y-4">
+        <h2 className="font-display text-2xl text-ink">
           Available beds by room type
         </h2>
-        <p className="text-sm text-stone-500">
+        <p className="text-sm text-ink/70">
           {totalBeds} bed spaces in inventory
+          {pendingBooking
+            ? " · finish your current booking before choosing another bed"
+            : ""}
         </p>
-        <ul className="divide-y divide-stone-200 border border-stone-200">
+        <div className="space-y-6">
           {availability.map((row) => (
-            <li
+            <RoomCard
               key={row.id}
-              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
-            >
-              <div>
-                <p className="font-medium text-stone-900">{row.name}</p>
-                <p className="text-sm text-stone-500">
-                  {row.capacity}-in-1 · GHS {row.pricePerBed} / bed
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <p className="text-sm font-medium text-stone-800">
-                  {row.availableBeds} available
-                </p>
-                {row.availableBeds > 0 && !pendingBooking ? (
-                  <Link
-                    href={`/resident/room-types/${row.id}`}
-                    className="rounded-md border border-stone-300 px-3 py-1.5 text-sm font-medium text-stone-800"
-                  >
-                    Choose bed
-                  </Link>
-                ) : null}
-              </div>
-            </li>
+              href={
+                row.availableBeds > 0 && !pendingBooking
+                  ? `/resident/room-types/${row.id}`
+                  : `/rooms/${row.id}`
+              }
+              name={row.name}
+              description={row.description}
+              capacity={row.capacity}
+              pricePerBed={row.pricePerBed}
+              amenities={row.amenities ?? []}
+              availableBeds={row.availableBeds}
+              imageUrl={row.coverImageUrl}
+              cta={
+                row.availableBeds > 0 && !pendingBooking
+                  ? "Choose bed"
+                  : "View photos"
+              }
+            />
           ))}
-        </ul>
+        </div>
       </section>
     </PortalShell>
   );

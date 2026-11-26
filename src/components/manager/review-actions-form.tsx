@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 
 import { ActionStatus } from "@/components/admin/action-status";
+import { PortalIcon } from "@/components/portal-icons";
 import {
   approveBookingAction,
   rejectBookingAction,
@@ -52,13 +53,15 @@ export function ReviewActionsForm({
         <button
           type="submit"
           disabled={pending || !hasProof}
-          className="rounded-md bg-emerald-800 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-md bg-emerald-800 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
+          <PortalIcon name="check" className="h-4 w-4" />
           {approvePending ? "Approving…" : "Approve & assign bed"}
         </button>
         {!hasProof ? (
           <p className="text-sm text-amber-800">
-            Waiting for resident payment reference and receipt.
+            Waiting for a non-refundable deposit of at least GHS 1,000 with
+            reference and receipt.
           </p>
         ) : null}
       </form>
@@ -84,8 +87,9 @@ export function ReviewActionsForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-800 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-800 disabled:opacity-60"
         >
+          <PortalIcon name="reject" className="h-4 w-4" />
           {rejectPending ? "Rejecting…" : "Reject & release bed"}
         </button>
       </form>

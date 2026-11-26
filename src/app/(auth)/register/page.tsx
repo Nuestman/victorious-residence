@@ -5,10 +5,12 @@ import { redirect } from "next/navigation";
 import { RegisterForm } from "@/components/auth/register-form";
 import { auth } from "@/server/auth";
 import { defaultDestinationForRole } from "@/server/auth/roles";
+import { duringRequest } from "@/server/db/request";
 
 export const instant = false;
 
 async function RegisterContent() {
+  await duringRequest();
   const session = await auth();
 
   if (session?.user) {
@@ -16,30 +18,28 @@ async function RegisterContent() {
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <div className="space-y-2">
-        <Link href="/" className="text-sm text-stone-500 hover:text-stone-800">
-          ← Home
-        </Link>
-        <h1 className="text-2xl font-semibold text-stone-900">
-          Create resident account
+        <h1 className="font-display text-4xl text-ink">
+          Create your account
         </h1>
-        <p className="text-sm text-stone-600">
-          Register to browse room types, hold a bed, and upload proof of
-          payment.
+        <p className="text-sm text-ink/75">
+          Sign up to browse and book a room. Already registered?{" "}
+          <Link href="/login" className="font-medium text-forest underline">
+            Sign in
+          </Link>
+          .
         </p>
       </div>
       <RegisterForm />
-    </>
+    </div>
   );
 }
 
 export default function RegisterPage() {
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center gap-6 px-6 py-16">
-      <Suspense fallback={<p className="text-sm text-stone-500">Loading…</p>}>
-        <RegisterContent />
-      </Suspense>
-    </main>
+    <Suspense fallback={<p className="text-sm text-ink/60">Loading…</p>}>
+      <RegisterContent />
+    </Suspense>
   );
 }

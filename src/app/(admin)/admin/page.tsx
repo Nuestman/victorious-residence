@@ -1,46 +1,86 @@
 import Link from "next/link";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 
-import { AdminNav } from "@/components/admin/admin-nav";
+import { ResidenceSwitcher } from "@/components/admin/residence-switcher";
 import { PortalShell } from "@/components/portal-shell";
+import {
+  listActiveResidences,
+  resolveAdminWorkingResidenceId,
+} from "@/server/admin-residence";
 import { requireAdmin } from "@/server/auth/guards";
 import { db } from "@/server/db";
-import { bedSpaces, roomTypes, rooms, users } from "@/server/db/schema";
+import { bedSpaces, rooms, roomTypes, users } from "@/server/db/schema";
 import { getAvailableBedsByRoomType } from "@/server/queries/availability";
+import { countNewContactInquiries } from "@/server/queries/contact-inquiries";
 
 export const instant = false;
 
 export default async function AdminHomePage() {
   const session = await requireAdmin("/admin");
+  const residences = await listActiveResidences();
+  const residenceId = await resolveAdminWorkingResidenceId();
 
-  const [typeCount] = await db.select({ value: count() }).from(roomTypes);
-  const [roomCount] = await db.select({ value: count() }).from(rooms);
-  const [userCount] = await db.select({ value: count() }).from(users);
-  const [availableBeds] = await db
-    .select({ value: count() })
-    .from(bedSpaces)
-    .where(eq(bedSpaces.status, "AVAILABLE"));
+  const [typeCount] = residenceId
+    ? await db
+        .select({ value: count() })
+        .from(roomTypes)
+        .where(eq(roomTypes.residenceId, residenceId))
+    : [{ value: 0 }];
+  const [roomCount] = residenceId
+    ? await db
+        .select({ value: count() })
+        .from(rooms)
+        .where(eq(rooms.residenceId, residenceId))
+    : [{ value: 0 }];
+  const [userCount] = residenceId
+    ? await db
+        .select({ value: count() })
+        .from(users)
+        .where(eq(users.residenceId, residenceId))
+    : [{ value: 0 }];
+  const [availableBeds] = residenceId
+    ? await db
+        .select({ value: count() })
+        .from(bedSpaces)
+        .innerJoin(rooms, eq(bedSpaces.roomId, rooms.id))
+        .where(
+          and(
+            eq(rooms.residenceId, residenceId),
+            eq(bedSpaces.status, "AVAILABLE"),
+          ),
+        )
+    : [{ value: 0 }];
 
   const availability = await getAvailableBedsByRoomType(
-    session.user.residenceId ?? undefined,
+    residenceId ?? undefined,
   );
+  const newMessages = await countNewContactInquiries();
+
+  const workingName =
+    residences.find((row) => row.id === residenceId)?.name ?? null;
 
   return (
     <PortalShell
       title="Admin CMS"
-      description="Define room types and provision rooms and bed spaces."
+      description="Manage campuses, inventory, residents, and staff."
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <AdminNav currentPath="/admin" />
+      <ResidenceSwitcher residences={residences} selectedId={residenceId} />
+      {workingName ? (
+        <p className="text-sm text-stone-600">
+          Overview for <strong>{workingName}</strong>.
+        </p>
+      ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {[
           { label: "Room types", value: typeCount.value },
           { label: "Rooms", value: roomCount.value },
           { label: "Available beds", value: availableBeds.value },
-          { label: "Users", value: userCount.value },
+          { label: "Users (campus)", value: userCount.value },
+          { label: "New messages", value: newMessages },
         ].map((stat) => (
           <div key={stat.label} className="border border-stone-200 px-4 py-3">
             <p className="text-sm text-stone-500">{stat.label}</p>
@@ -56,16 +96,28 @@ export default async function AdminHomePage() {
           <h2 className="text-lg font-medium text-stone-900">Availability</h2>
           <div className="flex gap-2">
             <Link
+              href="/admin/residences"
+              className="text-sm font-medium text-stone-800 underline"
+            >
+              Residences
+            </Link>
+            <Link
+              href="/admin/staff"
+              className="text-sm font-medium text-stone-800 underline"
+            >
+              Staff
+            </Link>
+            <Link
               href="/admin/room-types"
               className="text-sm font-medium text-stone-800 underline"
             >
               Manage types
             </Link>
             <Link
-              href="/admin/provision"
+              href="/admin/inquiries"
               className="text-sm font-medium text-stone-800 underline"
             >
-              Provision rooms
+              Messages
             </Link>
           </div>
         </div>
@@ -86,6 +138,11 @@ export default async function AdminHomePage() {
               </p>
             </li>
           ))}
+          {availability.length === 0 ? (
+            <li className="px-4 py-6 text-sm text-stone-600">
+              No room types for this campus yet.
+            </li>
+          ) : null}
         </ul>
       </section>
     </PortalShell>

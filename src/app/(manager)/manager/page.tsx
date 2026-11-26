@@ -2,19 +2,21 @@ import Link from "next/link";
 import { and, count, eq, isNotNull } from "drizzle-orm";
 import { Suspense } from "react";
 
-import { ManagerNav } from "@/components/manager/manager-nav";
 import { PortalShell } from "@/components/portal-shell";
 import { requireRole } from "@/server/auth/guards";
 import { db } from "@/server/db";
+import { duringRequest } from "@/server/db/request";
 import { bedSpaces, bookings } from "@/server/db/schema";
 import {
   getManagerReviewQueue,
   getRecentReviewedBookings,
 } from "@/server/queries/bookings";
+import { countNewContactInquiries } from "@/server/queries/contact-inquiries";
 
 export const instant = false;
 
 async function ManagerContent() {
+  await duringRequest();
   const session = await requireRole("MANAGER", "/manager");
 
   const [available] = await db
@@ -46,6 +48,7 @@ async function ManagerContent() {
 
   const queuePreview = await getManagerReviewQueue({ onlyWithProof: true });
   const recent = await getRecentReviewedBookings(5);
+  const newMessages = await countNewContactInquiries();
 
   return (
     <PortalShell
@@ -55,15 +58,15 @@ async function ManagerContent() {
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <ManagerNav currentPath="/manager" />
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {[
           { label: "Available beds", value: available.value },
           { label: "Pending payment beds", value: pendingBeds.value },
           { label: "Occupied", value: occupied.value },
-          { label: "Open holds", value: pendingReviews.value },
+          { label: "Pending bookings", value: pendingReviews.value },
           { label: "Ready to review", value: readyForReview.value },
+          { label: "New messages", value: newMessages },
         ].map((stat) => (
           <div key={stat.label} className="border border-stone-200 px-4 py-3">
             <p className="text-sm text-stone-500">{stat.label}</p>
@@ -72,6 +75,25 @@ async function ManagerContent() {
             </p>
           </div>
         ))}
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-medium text-stone-900">
+            Contact messages
+          </h2>
+          <Link
+            href="/manager/inquiries"
+            className="text-sm font-medium text-stone-800 underline"
+          >
+            Open inbox
+          </Link>
+        </div>
+        <p className="text-sm text-stone-600">
+          {newMessages === 0
+            ? "No new contact form messages."
+            : `${newMessages} new message${newMessages === 1 ? "" : "s"} waiting.`}
+        </p>
       </section>
 
       <section className="space-y-3">
@@ -102,8 +124,9 @@ async function ManagerContent() {
                     {row.residentName} · {row.roomLabel}-{row.bedLabel}
                   </p>
                   <p className="text-sm text-stone-500">
-                    GHS {row.amount} · ref {row.paymentReference} · expires{" "}
-                    {row.expiresAt.toLocaleString()}
+                    Full GHS {row.amount}
+                    {row.amountPaid ? ` · deposit GHS ${row.amountPaid}` : ""} ·
+                    ref {row.paymentReference}
                   </p>
                 </div>
                 <Link

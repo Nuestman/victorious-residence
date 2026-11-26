@@ -3,6 +3,8 @@
 import { useActionState } from "react";
 
 import { ActionStatus } from "@/components/admin/action-status";
+import { PortalIcon } from "@/components/portal-icons";
+import { MIN_RESERVATION_DEPOSIT_GHS } from "@/lib/booking";
 import {
   holdBedAction,
   type BookingActionState,
@@ -31,11 +33,15 @@ export function HoldBedForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-md bg-stone-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
       >
-        {pending ? "Holding…" : `Hold ${roomLabel}-${bedLabel}`}
+        <PortalIcon name="check" className="h-4 w-4" />
+        {pending ? "Starting…" : `Apply for ${roomLabel}-${bedLabel}`}
       </button>
-      <span className="text-sm text-stone-500">GHS {pricePerBed}</span>
+      <span className="text-sm text-stone-500">
+        GHS {pricePerBed} · reserve with GHS{" "}
+        {MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH")}+ deposit
+      </span>
       <ActionStatus error={state.error} success={state.success} />
     </form>
   );

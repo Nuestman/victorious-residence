@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/components/admin/admin-nav";
 import { PortalShell } from "@/components/portal-shell";
 import { ResidentDetail } from "@/components/staff/resident-detail";
 import { requireAdmin } from "@/server/auth/guards";
@@ -31,7 +30,6 @@ export default async function AdminResidentDetailPage({
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <AdminNav currentPath="/admin/residents" />
       <ResidentDetail
         listHref="/admin/residents"
         reviewBasePath="/manager/reviews"

@@ -2,7 +2,18 @@
 
 Production hostel inventory, resident booking, and payment-review system.
 
-**Stack:** Next.js · Drizzle · PostgreSQL (Neon) · Auth.js · Tailwind
+**Version:** `0.4.0` · **Stack:** Next.js · Drizzle · PostgreSQL (Neon) · Auth.js · Tailwind · Resend
+
+## What's in `0.4.0`
+
+- Public hospitality site (rooms, facilities, gallery, about, contact)
+- Multi-residence admin CMS + working-campus switcher
+- `STAFF` role and staff directories (admin + manager)
+- Deposit-based bed reservation (≥ GHS 1,000 non-refundable)
+- Payment balances + reminder emails
+- User profile (IDs, hometown, emergency contact, avatar, password)
+- Admin audit log UI
+- App version in portal sidebar footer
 
 ## Setup
 
@@ -35,6 +46,7 @@ Open http://localhost:17017
 | :--- | :--- | :--- |
 | `admin@victorious.local` | ADMIN | `ChangeMe123!` |
 | `manager@victorious.local` | MANAGER | `ChangeMe123!` |
+| `staff@victorious.local` | STAFF | `ChangeMe123!` |
 | `resident@victorious.local` | RESIDENT | `ChangeMe123!` |
 
 ## Scripts
@@ -52,6 +64,9 @@ Open http://localhost:17017
 
 - [`CHANGELOG.md`](./CHANGELOG.md) — release history
 - [`docs/PLAN.md`](./docs/PLAN.md) — architecture and phased delivery
+- [`docs/ROADMAP.md`](./docs/ROADMAP.md) — post-launch backlog
 - [`docs/project-proposal.md`](./docs/project-proposal.md) — client scope
 - [`docs/proposed-invoice.md`](./docs/proposed-invoice.md) — commercial terms
 - [`docs/training-checklist.md`](./docs/training-checklist.md) — staff go-live checklist
+- [`docs/public-showcase-design.md`](./docs/public-showcase-design.md) — public site design notes
+- [`docs/social-profile-copy.md`](./docs/social-profile-copy.md) — social bios / About copy

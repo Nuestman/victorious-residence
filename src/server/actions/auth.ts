@@ -1,11 +1,12 @@
 "use server";
 
-import { hash } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { asc, eq } from "drizzle-orm";
 import { AuthError } from "next-auth";
 import { z } from "zod";
 
-import { signIn, signOut } from "@/server/auth";
+import { writeAuditLog } from "@/server/audit";
+import { auth, signIn, signOut } from "@/server/auth";
 import { defaultDestinationForRole } from "@/server/auth/roles";
 import { db } from "@/server/db";
 import { residences, users } from "@/server/db/schema";
@@ -62,13 +63,34 @@ export async function loginAction(
   const callbackUrl = safeCallbackUrl(parsed.data.callbackUrl);
 
   const [existingUser] = await db
-    .select({ role: users.role })
+    .select({
+      id: users.id,
+      role: users.role,
+      passwordHash: users.passwordHash,
+    })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
 
+  if (!existingUser) {
+    return { error: "Invalid email or password." };
+  }
+
+  const valid = await compare(parsed.data.password, existingUser.passwordHash);
+  if (!valid) {
+    return { error: "Invalid email or password." };
+  }
+
+  await writeAuditLog({
+    actorId: existingUser.id,
+    action: "auth.login",
+    entityType: "user",
+    entityId: existingUser.id,
+    metadata: { email },
+  });
+
   const redirectTo =
-    callbackUrl ?? defaultDestinationForRole(existingUser?.role);
+    callbackUrl ?? defaultDestinationForRole(existingUser.role);
 
   try {
     await signIn("credentials", {
@@ -87,6 +109,15 @@ export async function loginAction(
 }
 
 export async function signOutAction() {
+  const session = await auth();
+  if (session?.user?.id) {
+    await writeAuditLog({
+      actorId: session.user.id,
+      action: "auth.logout",
+      entityType: "user",
+      entityId: session.user.id,
+    });
+  }
   await signOut({ redirectTo: "/" });
 }
 
@@ -133,13 +164,24 @@ export async function registerAction(
 
   const passwordHash = await hash(parsed.data.password, 12);
 
-  await db.insert(users).values({
-    email,
-    passwordHash,
-    fullName: parsed.data.fullName,
-    phone: parsed.data.phone,
-    role: "RESIDENT",
-    residenceId: residence.id,
+  const [created] = await db
+    .insert(users)
+    .values({
+      email,
+      passwordHash,
+      fullName: parsed.data.fullName,
+      phone: parsed.data.phone,
+      role: "RESIDENT",
+      residenceId: residence.id,
+    })
+    .returning({ id: users.id });
+
+  await writeAuditLog({
+    actorId: created.id,
+    action: "auth.register",
+    entityType: "user",
+    entityId: created.id,
+    metadata: { email, residenceId: residence.id },
   });
 
   try {

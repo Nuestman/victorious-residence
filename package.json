@@ -1,6 +1,6 @@
 {
   "name": "victorious-residence",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "scripts": {
     "dev": "next dev --port 17017",
@@ -11,18 +11,21 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push --force",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "tsx src/server/db/seed.ts"
+    "db:seed": "tsx src/server/db/seed.ts",
+    "db:seed:migrate": "tsx src/server/db/seed-migrations/index.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.45.4",
     "drizzle-zod": "^0.8.3",
-    "next": "16.4.3",
+    "lucide-react": "^1.74.0",
+    "next": "^16.4.6",
     "next-auth": "^5.0.0-beta.32",
     "postgres": "^3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "resend": "^6.39.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -34,7 +37,7 @@
     "dotenv": "^18.0.9",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "^16.4.6",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

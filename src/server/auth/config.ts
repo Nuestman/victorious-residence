@@ -3,7 +3,12 @@ import type { NextAuthConfig } from "next-auth";
 import type { UserRole } from "@/server/db/schema";
 
 function isUserRole(value: unknown): value is UserRole {
-  return value === "RESIDENT" || value === "MANAGER" || value === "ADMIN";
+  return (
+    value === "RESIDENT" ||
+    value === "STAFF" ||
+    value === "MANAGER" ||
+    value === "ADMIN"
+  );
 }
 
 /** Edge-safe config used by middleware (no Node-only providers). */

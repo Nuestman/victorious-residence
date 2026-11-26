@@ -7,7 +7,7 @@
 
 ---
 
-## Progress (as of 2026-10-27)
+## Progress (as of 2026-11-26 · app `0.4.0`)
 
 ### Done — Phase 0 Foundation
 - [x] Next.js + TypeScript + Tailwind app scaffold
@@ -28,21 +28,25 @@
 ### Done — Phase 2 Resident booking
 - [x] Public landing live availability counters
 - [x] Resident browse / choose bed
-- [x] Atomic bed hold + `expiresAt`
-- [x] Payment reference + receipt upload
+- [x] Deposit-based reservation (≥ GHS 1,000 non-refundable) — bed locks on deposit proof
+- [x] Payment reference + receipt upload + `amount_paid`
 - [x] My bookings
-- [x] Cron: expire stale PENDING (`/api/cron/expire-bookings`)
+- [x] Cron: expire unpaid applications only (`/api/cron/expire-bookings`)
 
 ### Done — Phase 3 Manager workflow
 - [x] Review queue (`/manager/reviews`)
 - [x] Approve / Reject with audit log (`/manager/reviews/[id]`)
 - [x] Dashboard counts + ready-to-review preview
 - [x] Race-safe approve/reject (`UPDATE … WHERE payment_status = 'PENDING'`)
+- [x] Payment balances + reminder emails (`/manager/balances`)
 
-### In progress — Phase 4 Hardening & launch
+### Done — Phase 4 Hardening & launch (partial)
 - [x] Resident self-registration (`/register`)
 - [x] Staff training checklist (`docs/training-checklist.md`)
 - [x] Residents list + detail in manager and admin portals
+- [x] User profile (`/profile`) + enriched resident fields
+- [x] Public showcase site + contact / inquiries + Resend mail
+- [x] Admin audit log UI (`/admin/audit`)
 - [ ] Soft launch UAT with Victorious management
 - [ ] Change demo passwords / production secrets hygiene
 - Deferred (scale later): S3/Vercel Blob for receipts — **data URLs in `bookings.receipt_url` for launch**
@@ -56,8 +60,8 @@
 | ORM               | **Drizzle**                                                    | Typed SQL, fast migrations, excellent Neon fit                         |
 | Room layouts      | **CMS-driven** `RoomType`                                      | Admin defines “1-bed”, “2-in-1”, “4-in-1”, etc. — no hardcoded filters |
 | Inventory unit    | **BedSpace**                                                   | Availability, holds, and occupancy are always per bed                  |
-| Payments (launch) | Upload receipt → manager approve/reject                        | Matches out-of-scope; schema still gateway-ready                       |
-| Tenancy           | Single residence seeded; schema multi-tenant via `residenceId` | Future campuses without rewrite                                        |
+| Payments (launch) | ≥ GHS 1,000 non-refundable deposit → reserve → manager review  | Schema still gateway-ready for live MoMo/bank later                    |
+| Tenancy           | Multi-residence UI (Phase 5); schema via `residenceId`         | Admin CRUD campuses + working-campus switcher                          |
 | Auth              | Auth.js credentials + role-gated middleware                    | Simple for Ghana hostel ops; no OAuth dependency                       |
 | Media / receipts  | **Launch:** data URLs in Postgres (≤1.5MB). **Later:** S3/Blob | Ship without storage vendor; upgrade when volume grows                 |
 
@@ -169,15 +173,13 @@ export const paymentStatusEnum = pgEnum("payment_status", [
 ### 2.4 Booking state machine
 
 ```
-AVAILABLE ──select──► PENDING_PAYMENT ──manager approve──► OCCUPIED
-                │                              │
-                │ upload receipt               │
-                │                              ▼
-                ├──manager reject──► AVAILABLE (+ booking FAILED)
-                └──expiresAt passed──► AVAILABLE (+ booking FAILED, system)
+AVAILABLE ──apply (no lock)──► deposit ≥ GHS 1000 proof ──► PENDING_PAYMENT ──approve──► OCCUPIED
+                                      │                              │
+                                      └──bed taken first──► fail     └──reject──► AVAILABLE
+Unpaid applications (no deposit) close after abandon window; deposit reservations are not timed out.
 ```
 
-**Concurrency:** transactional `UPDATE bed_spaces … WHERE status = 'AVAILABLE' RETURNING` *; zero rows ⇒ “just taken”.
+**Concurrency:** transactional `UPDATE bed_spaces … WHERE status = 'AVAILABLE' RETURNING` * on deposit submit; zero rows ⇒ “just taken”.
 
 ---
 
@@ -211,9 +213,9 @@ AVAILABLE ──select──► PENDING_PAYMENT ──manager approve──► O
 | **Public Showcase** | Landing, amenities/media, live available bed counts by RoomType |
 | **Resident Ledger** | Register/login, filter by type/price/availability, hold bed, payment ref + receipt, booking status |
 | **Management Panel** | PENDING queue, approve/reject, occupancy matrix, audit trail |
-| **Admin CMS** | Room types CRUD, bulk room+bed provisioning, residence profile/media, promote managers |
+| **Admin CMS** | Residences CRUD, room types, bulk provision, occupancy, staff/managers, residents |
 
-**Follow-on phase:** live MoMo/bank APIs, maintenance tickets, multi-residence UI switching (schema ready).
+**Follow-on backlog:** see [ROADMAP.md](./ROADMAP.md) (campuses/staff P0, payments, tickets, storage, etc.).
 
 ---
 
@@ -256,10 +258,23 @@ AVAILABLE ──select──► PENDING_PAYMENT ──manager approve──► O
 - [x] Resident registration  
 - [x] Training checklist  
 - [x] Neon + Vercel staging (production secrets / soft launch remaining)  
+- [x] Profile, public site, contact inbox, audit UI, balances/reminders (shipped in `0.4.0`)  
 - [ ] Soft launch UAT → December intake  
 - Deferred: object-storage receipts, broader automated access-control suite  
 
-**Buffer:** ~1 week UAT before last week of November.
+### Phase 5 — Campuses & staff (P0 on [ROADMAP.md](./ROADMAP.md)) ✅
+
+- [x] Admin residences CRUD (`/admin/residences`)  
+- [x] Admin working-campus switcher (inventory scoped per residence)  
+- [x] `STAFF` role + staff directory for admin and manager  
+- [x] Role rules: manager/admin CRUD staff; only admin assigns `MANAGER`  
+- [x] Seed demo staff user; stop primary-residence-only helpers  
+
+### Phase 6 — Ops polish (partial in `0.4.0`)
+
+- [x] Deposit reservation + balance tracking + payment reminder email  
+- [x] Admin audit trail UI  
+- [ ] Soft-launch UAT / secret hygiene (ROADMAP P1)  
 
 ---
 
@@ -306,4 +321,4 @@ RETURNING *;
 2. ~~`drizzle.config.ts` + full schema~~ ✅  
 3. ~~Migration + seed~~ ✅  
 4. ~~Auth + role middleware~~ ✅  
-5. ~~Admin CMS~~ ✅ → ~~Resident booking~~ ✅ → ~~Manager review~~ ✅ → **Hardening / polish**
+5. ~~Admin CMS~~ ✅ → ~~Resident booking~~ ✅ → ~~Manager review~~ ✅ → ~~Hardening~~ ✅ → ~~Campuses & staff~~ ✅ → **UAT / ROADMAP P1+** (`0.4.0` shipped)

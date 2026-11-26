@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 
 import { db } from "@/server/db";
+import { duringRequest } from "@/server/db/request";
 import {
   bedSpaces,
   bookings,
@@ -43,6 +44,8 @@ export async function getRoomTypeSummary(roomTypeId: string) {
       capacity: roomTypes.capacity,
       pricePerBed: roomTypes.pricePerBed,
       description: roomTypes.description,
+      amenities: roomTypes.amenities,
+      coverImageUrl: roomTypes.coverImageUrl,
       residenceId: roomTypes.residenceId,
       availableBeds: sql<number>`count(${bedSpaces.id}) filter (where ${bedSpaces.status} = 'AVAILABLE')`.mapWith(
         Number,
@@ -63,6 +66,7 @@ export async function getResidentBookings(residentId: string) {
     .select({
       id: bookings.id,
       amount: bookings.amount,
+      amountPaid: bookings.amountPaid,
       paymentStatus: bookings.paymentStatus,
       paymentReference: bookings.paymentReference,
       receiptUrl: bookings.receiptUrl,
@@ -91,6 +95,7 @@ export async function getBookingForResident(
     .select({
       id: bookings.id,
       amount: bookings.amount,
+      amountPaid: bookings.amountPaid,
       paymentStatus: bookings.paymentStatus,
       paymentReference: bookings.paymentReference,
       receiptUrl: bookings.receiptUrl,
@@ -121,6 +126,7 @@ export async function getBookingForResident(
 const managerBookingSelect = {
   id: bookings.id,
   amount: bookings.amount,
+  amountPaid: bookings.amountPaid,
   paymentStatus: bookings.paymentStatus,
   paymentReference: bookings.paymentReference,
   receiptUrl: bookings.receiptUrl,
@@ -143,6 +149,7 @@ const managerBookingSelect = {
 export async function getManagerReviewQueue(options?: {
   onlyWithProof?: boolean;
 }) {
+  await duringRequest();
   const conditions = [eq(bookings.paymentStatus, "PENDING")];
 
   if (options?.onlyWithProof) {
@@ -179,6 +186,7 @@ export async function getManagerBooking(bookingId: string) {
 }
 
 export async function getRecentReviewedBookings(limit = 10) {
+  await duringRequest();
   return db
     .select(managerBookingSelect)
     .from(bookings)

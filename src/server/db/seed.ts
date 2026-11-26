@@ -1,21 +1,37 @@
 import { config } from "dotenv";
 import { hash } from "bcryptjs";
-import { eq } from "drizzle-orm";
+import { and, count, eq, or, inArray, sql } from "drizzle-orm";
+
+import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/contact";
+
+import {
+  HERO_IMAGE,
+  SHOWCASE_DESCRIPTION,
+  showcaseMedia,
+  showcaseRoomTypes,
+} from "./showcase-content";
 
 config({ path: ".env.local" });
 config({ path: ".env" });
 
+/**
+ * Bootstrap seed only: insert missing rows. Never overwrites admin-edited
+ * residence copy, contact fields, or media captions. Run `db:seed:migrate`
+ * for incremental, idempotent data fixes.
+ */
 async function seed() {
   const { db } = await import("./index");
   const {
     bedSpaces,
     residences,
     rooms,
+    residenceMedia,
+    roomTypeMedia,
     roomTypes,
     users,
   } = await import("./schema");
 
-  console.log("Seeding Victorious Residence…");
+  console.log("Seeding Victorious Residence (insert-only)…");
 
   const [residence] = await db
     .insert(residences)
@@ -23,8 +39,10 @@ async function seed() {
       name: "Victorious Residence",
       slug: "victorious-residence",
       address: "Obuasi, Ghana",
-      description:
-        "Student and worker hostel with flexible room types and digitized bed allocation.",
+      description: SHOWCASE_DESCRIPTION,
+      phone: CONTACT_PHONE,
+      email: CONTACT_EMAIL,
+      heroImageUrl: HERO_IMAGE,
       isActive: true,
     })
     .onConflictDoNothing({ target: residences.slug })
@@ -43,6 +61,17 @@ async function seed() {
   if (!existingResidence) {
     throw new Error("Failed to create or load residence");
   }
+
+  // Fill only empty contact / hero fields — never clobber live values.
+  await db
+    .update(residences)
+    .set({
+      description: sql`coalesce(nullif(trim(${residences.description}), ''), ${SHOWCASE_DESCRIPTION})`,
+      phone: sql`coalesce(nullif(trim(${residences.phone}), ''), ${CONTACT_PHONE})`,
+      email: sql`coalesce(nullif(trim(${residences.email}), ''), ${CONTACT_EMAIL})`,
+      heroImageUrl: sql`coalesce(nullif(trim(${residences.heroImageUrl}), ''), ${HERO_IMAGE})`,
+    })
+    .where(eq(residences.id, existingResidence.id));
 
   const passwordHash = await hash("ChangeMe123!", 12);
 
@@ -73,40 +102,18 @@ async function seed() {
         role: "RESIDENT",
         residenceId: existingResidence.id,
       },
+      {
+        email: "staff@victorious.local",
+        passwordHash,
+        fullName: "Demo Staff",
+        phone: "+233000000004",
+        role: "STAFF",
+        residenceId: existingResidence.id,
+      },
     ])
     .onConflictDoNothing({ target: users.email });
 
-  const typeDefs = [
-    {
-      name: "Executive Single",
-      capacity: 1,
-      pricePerBed: "2500.00",
-      description: "Private room, one bed.",
-      sortOrder: 1,
-      roomCount: 2,
-      labelPrefix: "S",
-    },
-    {
-      name: "Standard 2-in-1",
-      capacity: 2,
-      pricePerBed: "1800.00",
-      description: "Shared room with two bed spaces.",
-      sortOrder: 2,
-      roomCount: 4,
-      labelPrefix: "D",
-    },
-    {
-      name: "Economy 4-in-1",
-      capacity: 4,
-      pricePerBed: "1200.00",
-      description: "Shared room with four bed spaces.",
-      sortOrder: 3,
-      roomCount: 3,
-      labelPrefix: "Q",
-    },
-  ] as const;
-
-  for (const typeDef of typeDefs) {
+  for (const typeDef of showcaseRoomTypes) {
     const [roomType] = await db
       .insert(roomTypes)
       .values({
@@ -115,7 +122,8 @@ async function seed() {
         capacity: typeDef.capacity,
         pricePerBed: typeDef.pricePerBed,
         description: typeDef.description,
-        amenities: ["Wi-Fi", "Shared kitchen", "Security"],
+        amenities: [...typeDef.amenities],
+        coverImageUrl: typeDef.coverImageUrl,
         isActive: true,
         sortOrder: typeDef.sortOrder,
       })
@@ -130,12 +138,33 @@ async function seed() {
         await db
           .select()
           .from(roomTypes)
-          .where(eq(roomTypes.name, typeDef.name))
+          .where(
+            and(
+              eq(roomTypes.residenceId, existingResidence.id),
+              eq(roomTypes.name, typeDef.name),
+            ),
+          )
           .limit(1)
       )[0];
 
     if (!resolvedType) {
       continue;
+    }
+
+    const [angleCount] = await db
+      .select({ value: count() })
+      .from(roomTypeMedia)
+      .where(eq(roomTypeMedia.roomTypeId, resolvedType.id));
+
+    if (Number(angleCount?.value ?? 0) === 0) {
+      await db.insert(roomTypeMedia).values(
+        typeDef.angles.map((angle, index) => ({
+          roomTypeId: resolvedType.id,
+          url: angle.url,
+          caption: angle.caption,
+          sortOrder: index,
+        })),
+      );
     }
 
     for (let i = 1; i <= typeDef.roomCount; i += 1) {
@@ -160,7 +189,12 @@ async function seed() {
           await db
             .select()
             .from(rooms)
-            .where(eq(rooms.label, label))
+            .where(
+              and(
+                eq(rooms.residenceId, existingResidence.id),
+                eq(rooms.label, label),
+              ),
+            )
             .limit(1)
         )[0];
 
@@ -187,10 +221,50 @@ async function seed() {
     }
   }
 
-  console.log("Seed complete.");
+  for (const item of showcaseMedia) {
+    const titles =
+      item.title === "Reception"
+        ? [item.title, "Secure entrance"]
+        : [item.title];
+    const urls =
+      item.title === "Reception"
+        ? [item.url, "/showcase/facility-gate.jpg"]
+        : [item.url];
+    const [existingMedia] = await db
+      .select()
+      .from(residenceMedia)
+      .where(
+        and(
+          eq(residenceMedia.residenceId, existingResidence.id),
+          or(
+            inArray(residenceMedia.url, urls),
+            inArray(residenceMedia.title, titles),
+          ),
+        ),
+      )
+      .limit(1);
+
+    if (existingMedia) {
+      continue;
+    }
+
+    await db.insert(residenceMedia).values({
+      residenceId: existingResidence.id,
+      kind: item.kind,
+      title: item.title,
+      description: item.description,
+      url: item.url,
+      caption: item.caption,
+      sortOrder: item.sortOrder,
+    });
+  }
+
+  console.log("Bootstrap seed complete (no overwrites of existing content).");
+  console.log("Run `npm run db:seed:migrate` for incremental data migrations.");
   console.log("Demo logins (password: ChangeMe123!):");
   console.log("  admin@victorious.local");
   console.log("  manager@victorious.local");
+  console.log("  staff@victorious.local");
   console.log("  resident@victorious.local");
 }
 

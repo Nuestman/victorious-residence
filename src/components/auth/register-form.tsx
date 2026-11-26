@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { PortalIcon } from "@/components/portal-icons";
 import { registerAction, type RegisterState } from "@/server/actions/auth";
 
 const initialState: RegisterState = {};
@@ -86,9 +87,10 @@ export function RegisterForm() {
         <button
           type="submit"
           disabled={pending}
-          className="w-full rounded-md bg-stone-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-stone-900 px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
         >
-          {pending ? "Creating account…" : "Create resident account"}
+          <PortalIcon name="plus" className="h-4 w-4" />
+          {pending ? "Creating account…" : "Create account"}
         </button>
       </form>
 

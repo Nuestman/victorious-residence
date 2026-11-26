@@ -1,9 +1,11 @@
 import { and, eq, sql } from "drizzle-orm";
 
+import { duringRequest } from "@/server/db/request";
 import { db } from "@/server/db";
 import { bedSpaces, roomTypes, rooms } from "@/server/db/schema";
 
 export async function getAvailableBedsByRoomType(residenceId?: string) {
+  await duringRequest();
   const conditions = [eq(roomTypes.isActive, true)];
 
   if (residenceId) {
@@ -17,6 +19,8 @@ export async function getAvailableBedsByRoomType(residenceId?: string) {
       capacity: roomTypes.capacity,
       pricePerBed: roomTypes.pricePerBed,
       description: roomTypes.description,
+      amenities: roomTypes.amenities,
+      coverImageUrl: roomTypes.coverImageUrl,
       sortOrder: roomTypes.sortOrder,
       availableBeds: sql<number>`count(${bedSpaces.id}) filter (where ${bedSpaces.status} = 'AVAILABLE')`.mapWith(
         Number,
@@ -35,6 +39,7 @@ export async function getAvailableBedsByRoomType(residenceId?: string) {
 }
 
 export async function getOccupancyBoard(residenceId: string) {
+  await duringRequest();
   const rows = await db
     .select({
       roomId: rooms.id,

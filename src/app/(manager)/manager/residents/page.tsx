@@ -1,4 +1,3 @@
-import { ManagerNav } from "@/components/manager/manager-nav";
 import { PortalShell } from "@/components/portal-shell";
 import { ResidentsList } from "@/components/staff/residents-list";
 import { requireRole } from "@/server/auth/guards";
@@ -18,7 +17,6 @@ export default async function ManagerResidentsPage() {
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <ManagerNav currentPath="/manager/residents" />
       <p className="text-sm text-stone-500">
         {residents.length} resident{residents.length === 1 ? "" : "s"}
       </p>

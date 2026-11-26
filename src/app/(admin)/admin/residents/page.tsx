@@ -1,4 +1,3 @@
-import { AdminNav } from "@/components/admin/admin-nav";
 import { PortalShell } from "@/components/portal-shell";
 import { ResidentsList } from "@/components/staff/residents-list";
 import { requireAdmin } from "@/server/auth/guards";
@@ -19,7 +18,6 @@ export default async function AdminResidentsPage() {
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <AdminNav currentPath="/admin/residents" />
       <p className="text-sm text-stone-500">
         {residents.length} resident{residents.length === 1 ? "" : "s"}
       </p>

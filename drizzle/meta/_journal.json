@@ -8,6 +8,34 @@
       "when": 1793039515361,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794442309851,
+      "tag": "0001_lean_clint_barton",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795612456556,
+      "tag": "0002_seed_migrations",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795613287605,
+      "tag": "0003_contact_inquiries",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795619436528,
+      "tag": "0004_contact_inquiry_replies",
+      "breakpoints": true
     }
   ]
 }

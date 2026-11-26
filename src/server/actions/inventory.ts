@@ -1,16 +1,19 @@
 "use server";
 
-import { and, asc, eq, inArray, max } from "drizzle-orm";
+import { and, eq, inArray, max } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { bedLabelsForCapacity, formatRoomLabel } from "@/lib/bed-labels";
+import { parseAmenities, parseMediaUrl } from "@/lib/media-url";
+import { revalidatePublicShowcase } from "@/server/revalidate-public";
+import { getResidenceById } from "@/server/admin-residence";
 import { requireAdmin } from "@/server/auth/guards";
 import { db } from "@/server/db";
 import {
   auditLogs,
   bedSpaces,
-  residences,
+  roomTypeMedia,
   rooms,
   roomTypes,
 } from "@/server/db/schema";
@@ -25,28 +28,15 @@ const moneySchema = z
   .trim()
   .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid amount (e.g. 1800 or 1800.00)");
 
-const roomTypeSchema = z.object({
+const roomTypeFieldsSchema = z.object({
   name: z.string().trim().min(2).max(80),
   capacity: z.coerce.number().int().min(1).max(26),
   pricePerBed: moneySchema,
-  description: z.string().trim().max(500).optional(),
+  description: z.string().trim().max(2000).optional(),
   sortOrder: z.coerce.number().int().min(0).max(999).default(0),
+  amenities: z.string().trim().max(500).optional(),
+  coverImageUrl: z.string().trim().max(500).optional(),
 });
-
-async function getPrimaryResidenceId() {
-  const [residence] = await db
-    .select({ id: residences.id })
-    .from(residences)
-    .where(eq(residences.isActive, true))
-    .orderBy(asc(residences.createdAt))
-    .limit(1);
-
-  if (!residence) {
-    throw new Error("No active residence found. Seed the database first.");
-  }
-
-  return residence.id;
-}
 
 async function writeAudit(
   actorId: string,
@@ -64,13 +54,56 @@ async function writeAudit(
   });
 }
 
-function revalidateInventoryPaths() {
+function revalidateInventoryPaths(roomTypeId?: string) {
   revalidatePath("/admin");
   revalidatePath("/admin/room-types");
   revalidatePath("/admin/provision");
   revalidatePath("/admin/occupancy");
   revalidatePath("/resident");
   revalidatePath("/manager");
+  revalidatePublicShowcase(roomTypeId);
+}
+
+function readCover(formData: FormData) {
+  const cover = parseMediaUrl(formData.get("coverImageUrl"));
+  if (cover === "invalid") {
+    return {
+      error: "Cover image must be a site path starting with / or an http(s) URL.",
+    } as const;
+  }
+  return { coverImageUrl: cover } as const;
+}
+
+function readGallery(formData: FormData) {
+  const urls = formData.getAll("galleryUrl");
+  const captions = formData.getAll("galleryCaption");
+  const rows: Array<{ url: string; caption: string | null; sortOrder: number }> =
+    [];
+
+  for (let index = 0; index < urls.length; index += 1) {
+    const url = parseMediaUrl(urls[index]);
+    if (url === "invalid") {
+      return {
+        error:
+          "Room photo URLs must be a site path starting with / or an http(s) URL.",
+      } as const;
+    }
+    if (!url) {
+      continue;
+    }
+    const caption = String(captions[index] ?? "").trim();
+    rows.push({
+      url,
+      caption: caption.length > 0 ? caption : null,
+      sortOrder: rows.length,
+    });
+  }
+
+  if (rows.length > 8) {
+    return { error: "Add at most 8 room photos." } as const;
+  }
+
+  return { rows } as const;
 }
 
 export async function createRoomTypeAction(
@@ -79,31 +112,45 @@ export async function createRoomTypeAction(
 ): Promise<InventoryActionState> {
   const session = await requireAdmin();
 
-  const parsed = roomTypeSchema.safeParse({
-    name: formData.get("name"),
-    capacity: formData.get("capacity"),
-    pricePerBed: formData.get("pricePerBed"),
-    description: formData.get("description") || undefined,
-    sortOrder: formData.get("sortOrder") || 0,
-  });
+  const parsed = roomTypeFieldsSchema
+    .extend({ residenceId: z.string().uuid() })
+    .safeParse({
+      name: formData.get("name"),
+      capacity: formData.get("capacity"),
+      pricePerBed: formData.get("pricePerBed"),
+      description: formData.get("description") || undefined,
+      sortOrder: formData.get("sortOrder") || 0,
+      amenities: formData.get("amenities") || undefined,
+      coverImageUrl: formData.get("coverImageUrl") || undefined,
+      residenceId: formData.get("residenceId"),
+    });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid room type." };
   }
 
-  const residenceId = await getPrimaryResidenceId();
+  const cover = readCover(formData);
+  if ("error" in cover) {
+    return { error: cover.error };
+  }
+
+  const residence = await getResidenceById(parsed.data.residenceId);
+  if (!residence || !residence.isActive) {
+    return { error: "Select an active residence before creating room types." };
+  }
 
   try {
     const [created] = await db
       .insert(roomTypes)
       .values({
-        residenceId,
+        residenceId: residence.id,
         name: parsed.data.name,
         capacity: parsed.data.capacity,
         pricePerBed: parsed.data.pricePerBed,
         description: parsed.data.description || null,
+        amenities: parseAmenities(parsed.data.amenities),
+        coverImageUrl: cover.coverImageUrl,
         sortOrder: parsed.data.sortOrder,
-        amenities: [],
         isActive: true,
       })
       .returning({ id: roomTypes.id });
@@ -137,7 +184,7 @@ export async function updateRoomTypeAction(
     return { error: "Invalid room type id." };
   }
 
-  const parsed = roomTypeSchema
+  const parsed = roomTypeFieldsSchema
     .extend({
       isActive: z
         .enum(["true", "false"])
@@ -149,11 +196,23 @@ export async function updateRoomTypeAction(
       pricePerBed: formData.get("pricePerBed"),
       description: formData.get("description") || undefined,
       sortOrder: formData.get("sortOrder") || 0,
+      amenities: formData.get("amenities") || undefined,
+      coverImageUrl: formData.get("coverImageUrl") || undefined,
       isActive: formData.get("isActive") ?? "true",
     });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid room type." };
+  }
+
+  const cover = readCover(formData);
+  if ("error" in cover) {
+    return { error: cover.error };
+  }
+
+  const gallery = readGallery(formData);
+  if ("error" in gallery) {
+    return { error: gallery.error };
   }
 
   try {
@@ -164,6 +223,8 @@ export async function updateRoomTypeAction(
         capacity: parsed.data.capacity,
         pricePerBed: parsed.data.pricePerBed,
         description: parsed.data.description || null,
+        amenities: parseAmenities(parsed.data.amenities),
+        coverImageUrl: cover.coverImageUrl,
         sortOrder: parsed.data.sortOrder,
         isActive: parsed.data.isActive,
       })
@@ -174,6 +235,21 @@ export async function updateRoomTypeAction(
       return { error: "Room type not found." };
     }
 
+    await db
+      .delete(roomTypeMedia)
+      .where(eq(roomTypeMedia.roomTypeId, updated.id));
+
+    if (gallery.rows.length > 0) {
+      await db.insert(roomTypeMedia).values(
+        gallery.rows.map((row) => ({
+          roomTypeId: updated.id,
+          url: row.url,
+          caption: row.caption,
+          sortOrder: row.sortOrder,
+        })),
+      );
+    }
+
     await writeAudit(
       session.user.id,
       "room_type.update",
@@ -182,7 +258,7 @@ export async function updateRoomTypeAction(
       parsed.data,
     );
 
-    revalidateInventoryPaths();
+    revalidateInventoryPaths(updated.id);
     return { success: `Updated “${updated.name}”.` };
   } catch {
     return {

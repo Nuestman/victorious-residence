@@ -3,9 +3,12 @@ import { notFound } from "next/navigation";
 
 import { PortalShell } from "@/components/portal-shell";
 import { PaymentProofForm } from "@/components/resident/payment-proof-form";
-import { ResidentNav } from "@/components/resident/resident-nav";
-import { requireRole } from "@/server/auth/guards";
+import {
+  MIN_RESERVATION_DEPOSIT_GHS,
+  parseMoneyAmount,
+} from "@/lib/booking";
 import { expireBookingById } from "@/server/actions/bookings";
+import { requireRole } from "@/server/auth/guards";
 import { getBookingForResident } from "@/server/queries/bookings";
 
 export const instant = false;
@@ -27,6 +30,7 @@ export default async function BookingDetailPage({
 
   if (
     booking.paymentStatus === "PENDING" &&
+    !booking.receiptUrl &&
     booking.expiresAt.getTime() < Date.now()
   ) {
     await expireBookingById(booking.id, "booking.expire_on_view");
@@ -38,17 +42,24 @@ export default async function BookingDetailPage({
 
   const canSubmitProof =
     booking.paymentStatus === "PENDING" &&
+    !booking.receiptUrl &&
     booking.expiresAt.getTime() >= Date.now();
+
+  const reserved =
+    booking.paymentStatus === "PENDING" && Boolean(booking.receiptUrl);
+  const paid = booking.amountPaid ? parseMoneyAmount(booking.amountPaid) : null;
+  const full = parseMoneyAmount(booking.amount) ?? 0;
+  const remaining =
+    paid !== null ? Math.max(0, Math.round((full - paid) * 100) / 100) : null;
 
   return (
     <PortalShell
       title={`${booking.roomLabel}-${booking.bedLabel}`}
-      description={`${booking.roomTypeName} · GHS ${booking.amount}`}
+      description={`${booking.roomTypeName} · full price GHS ${booking.amount}`}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <ResidentNav currentPath="/resident/bookings" />
       <Link
         href="/resident/bookings"
         className="text-sm text-stone-500 hover:text-stone-800"
@@ -59,24 +70,49 @@ export default async function BookingDetailPage({
       <dl className="grid gap-3 border border-stone-200 px-4 py-3 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-stone-500">Status</dt>
-          <dd className="font-medium text-stone-900">{booking.paymentStatus}</dd>
+          <dd className="font-medium text-stone-900">
+            {booking.paymentStatus === "PENDING" && reserved
+              ? "Deposit submitted — awaiting review"
+              : booking.paymentStatus}
+          </dd>
         </div>
         <div>
           <dt className="text-stone-500">Bed status</dt>
           <dd className="font-medium text-stone-900">{booking.bedStatus}</dd>
         </div>
         <div>
-          <dt className="text-stone-500">Hold expires</dt>
+          <dt className="text-stone-500">Reservation</dt>
           <dd className="font-medium text-stone-900">
-            {booking.expiresAt.toLocaleString()}
+            {reserved || booking.paymentStatus === "SUCCESS"
+              ? "Reserved (deposit on file)"
+              : "Not reserved until GHS " +
+                MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH") +
+                "+ deposit"}
           </dd>
         </div>
         <div>
-          <dt className="text-stone-500">Created</dt>
+          <dt className="text-stone-500">
+            {reserved ? "Application started" : "Apply by"}
+          </dt>
           <dd className="font-medium text-stone-900">
-            {booking.createdAt.toLocaleString()}
+            {reserved
+              ? booking.createdAt.toLocaleString()
+              : booking.expiresAt.toLocaleString()}
           </dd>
         </div>
+        {booking.amountPaid ? (
+          <div>
+            <dt className="text-stone-500">Amount paid (claimed)</dt>
+            <dd className="font-medium text-stone-900">
+              GHS {booking.amountPaid}
+              {remaining !== null && remaining > 0
+                ? ` · balance GHS ${remaining.toFixed(2)}`
+                : remaining === 0
+                  ? " · paid in full"
+                  : ""}
+            </dd>
+          </div>
+        ) : null}
         {booking.paymentReference ? (
           <div>
             <dt className="text-stone-500">Payment reference</dt>
@@ -116,15 +152,25 @@ export default async function BookingDetailPage({
       ) : null}
 
       {canSubmitProof ? (
-        <section className="max-w-lg space-y-3">
-          <h2 className="text-lg font-medium text-stone-900">
-            Upload proof of payment
-          </h2>
-          <p className="text-sm text-stone-600">
-            Pay via MoMo or bank transfer for GHS {booking.amount}, then enter
-            the reference and upload your receipt screenshot.
-          </p>
-          <PaymentProofForm bookingId={booking.id} />
+        <section className="max-w-lg space-y-4 rounded-lg border border-forest/25 bg-cream/60 p-5 sm:p-6">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold tracking-[0.14em] text-brass uppercase">
+              Next step
+            </p>
+            <h2 className="text-xl font-medium text-stone-900">
+              Pay deposit to reserve
+            </h2>
+            <p className="text-sm text-stone-600">
+              Pay at least GHS{" "}
+              {MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH")} by MoMo or
+              bank transfer (non-refundable). The bed is only reserved after you
+              submit this proof. Full price is GHS {booking.amount}.
+            </p>
+          </div>
+          <PaymentProofForm
+            bookingId={booking.id}
+            fullAmount={booking.amount}
+          />
         </section>
       ) : null}
     </PortalShell>

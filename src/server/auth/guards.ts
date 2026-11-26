@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/server/auth";
 import { hasMinimumRole } from "@/server/auth/roles";
+import { duringRequest } from "@/server/db/request";
 import type { UserRole } from "@/server/db/schema";
 
 export async function requireSession(callbackPath?: string) {
+  await duringRequest();
   const session = await auth();
 
   if (!session?.user) {

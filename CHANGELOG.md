@@ -10,7 +10,43 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Planned
 
 - Soft-launch UAT with Victorious management
-- Object-storage receipts when scaling (kept as Postgres data URLs for launch)
+- Object-storage receipts / avatars when scaling (kept as Postgres data URLs for launch)
+- Remaining ROADMAP P1–P3 items
+
+## [0.4.0] - 2026-11-26
+
+### Added
+
+- Public hospitality site (`/`, `/rooms`, `/facilities`, `/gallery`, `/about`, `/contact`)
+  - Shared public header/footer, room cards, galleries, live availability
+  - Contact form + staff inquiry inbox (`/admin/inquiries`, `/manager/inquiries`) with Resend email
+- Multi-residence admin CMS (`/admin/residences`) and working-campus switcher
+- `STAFF` role; staff directories for admin (`/admin/staff`) and manager (`/manager/staff`)
+  - Managers create/edit `STAFF` only; only admin may assign `MANAGER`
+- User profile (`/profile`) for all signed-in roles
+  - National ID, student ID, hometown, emergency contact, avatar, password change
+- Deposit-based bed reservation (≥ GHS 1,000 non-refundable) instead of timed auto-holds
+  - `bookings.amount_paid`; bed locks only after deposit proof
+- Payment balances tracking (`/admin/balances`, `/manager/balances`)
+  - Full / paid / remaining on review and resident detail
+  - Email payment reminder button (Resend)
+- Admin audit log UI (`/admin/audit`) with search and filters
+  - Logs sign-in, sign-out, registration, campus switch, and existing domain actions
+- Post-launch docs: `docs/ROADMAP.md`, public showcase design notes, social copy
+- App version shown in portal sidebar footer (`package.json` → `src/lib/version.ts`)
+
+### Changed
+
+- Shared portal chrome (sidebar + header) replaces per-role nav components
+- Booking / training / proposal copy updated for deposit reservation
+- Cron expires unpaid applications only (deposit reservations are not timed out)
+- Inventory and admin overview scoped to selected campus
+
+### Planned (carried)
+
+- Soft-launch UAT; production secret hygiene
+- Object storage for receipts and avatars
+- Live MoMo/bank gateways, maintenance tickets (see ROADMAP)
 
 ## [0.3.0] - 2026-10-27
 
@@ -75,7 +111,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Project proposal, invoice draft, and architecture plan
 - Environment template (`.env.example`)
 
-[Unreleased]: https://github.com/Nuestman/victorious-residence/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Nuestman/victorious-residence/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Nuestman/victorious-residence/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Nuestman/victorious-residence/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Nuestman/victorious-residence/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Nuestman/victorious-residence/releases/tag/v0.1.0

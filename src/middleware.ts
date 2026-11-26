@@ -11,6 +11,8 @@ const protectedMatchers: Array<{ prefix: string; minimumRole: UserRole }> = [
   { prefix: "/admin", minimumRole: "ADMIN" },
   { prefix: "/manager", minimumRole: "MANAGER" },
   { prefix: "/resident", minimumRole: "RESIDENT" },
+  // Any signed-in role (STAFF+ included via rank ≥ RESIDENT)
+  { prefix: "/profile", minimumRole: "RESIDENT" },
 ];
 
 export default auth((request) => {
@@ -39,5 +41,11 @@ export default auth((request) => {
 });
 
 export const config = {
-  matcher: ["/admin/:path*", "/manager/:path*", "/resident/:path*"],
+  matcher: [
+    "/admin/:path*",
+    "/manager/:path*",
+    "/resident/:path*",
+    "/profile",
+    "/profile/:path*",
+  ],
 };

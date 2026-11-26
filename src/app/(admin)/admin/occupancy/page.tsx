@@ -1,6 +1,10 @@
-import { AdminNav } from "@/components/admin/admin-nav";
 import { OccupancyBoard } from "@/components/admin/occupancy-board";
+import { ResidenceSwitcher } from "@/components/admin/residence-switcher";
 import { PortalShell } from "@/components/portal-shell";
+import {
+  listActiveResidences,
+  resolveAdminWorkingResidenceId,
+} from "@/server/admin-residence";
 import { requireAdmin } from "@/server/auth/guards";
 import { getOccupancyBoard } from "@/server/queries/availability";
 
@@ -8,37 +12,31 @@ export const instant = false;
 
 export default async function AdminOccupancyPage() {
   const session = await requireAdmin("/admin/occupancy");
-
-  if (!session.user.residenceId) {
-    return (
-      <PortalShell
-        title="Occupancy"
-        description="Room → bed matrix for the residence."
-        userName={session.user.name}
-        userEmail={session.user.email}
-        role={session.user.role}
-      >
-        <AdminNav currentPath="/admin/occupancy" />
-        <p className="text-sm text-stone-600">
-          Your admin user is not linked to a residence. Re-seed or assign{" "}
-          <code>residenceId</code> on the user record.
-        </p>
-      </PortalShell>
-    );
-  }
-
-  const rooms = await getOccupancyBoard(session.user.residenceId);
+  const residences = await listActiveResidences();
+  const residenceId = await resolveAdminWorkingResidenceId();
+  const rooms = residenceId ? await getOccupancyBoard(residenceId) : [];
+  const workingName =
+    residences.find((row) => row.id === residenceId)?.name ?? null;
 
   return (
     <PortalShell
       title="Occupancy"
-      description="Live room → bed matrix across the residence."
+      description="Live room → bed matrix for the selected campus."
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <AdminNav currentPath="/admin/occupancy" />
-      <OccupancyBoard rooms={rooms} />
+      <ResidenceSwitcher residences={residences} selectedId={residenceId} />
+      {workingName ? (
+        <p className="text-sm text-stone-600">
+          Showing occupancy for <strong>{workingName}</strong>.
+        </p>
+      ) : (
+        <p className="text-sm text-stone-600">
+          Create or activate a residence to view occupancy.
+        </p>
+      )}
+      {residenceId ? <OccupancyBoard rooms={rooms} /> : null}
     </PortalShell>
   );
 }

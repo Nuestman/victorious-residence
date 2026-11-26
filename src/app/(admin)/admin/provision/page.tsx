@@ -1,8 +1,12 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
-import { AdminNav } from "@/components/admin/admin-nav";
 import { ProvisionRoomsForm } from "@/components/admin/provision-rooms-form";
+import { ResidenceSwitcher } from "@/components/admin/residence-switcher";
 import { PortalShell } from "@/components/portal-shell";
+import {
+  listActiveResidences,
+  resolveAdminWorkingResidenceId,
+} from "@/server/admin-residence";
 import { requireAdmin } from "@/server/auth/guards";
 import { db } from "@/server/db";
 import { roomTypes } from "@/server/db/schema";
@@ -11,17 +15,29 @@ export const instant = false;
 
 export default async function AdminProvisionPage() {
   const session = await requireAdmin("/admin/provision");
+  const residences = await listActiveResidences();
+  const residenceId = await resolveAdminWorkingResidenceId();
 
-  const types = await db
-    .select({
-      id: roomTypes.id,
-      name: roomTypes.name,
-      capacity: roomTypes.capacity,
-      pricePerBed: roomTypes.pricePerBed,
-    })
-    .from(roomTypes)
-    .where(eq(roomTypes.isActive, true))
-    .orderBy(asc(roomTypes.sortOrder), asc(roomTypes.name));
+  const types = residenceId
+    ? await db
+        .select({
+          id: roomTypes.id,
+          name: roomTypes.name,
+          capacity: roomTypes.capacity,
+          pricePerBed: roomTypes.pricePerBed,
+        })
+        .from(roomTypes)
+        .where(
+          and(
+            eq(roomTypes.isActive, true),
+            eq(roomTypes.residenceId, residenceId),
+          ),
+        )
+        .orderBy(asc(roomTypes.sortOrder), asc(roomTypes.name))
+    : [];
+
+  const workingName =
+    residences.find((row) => row.id === residenceId)?.name ?? null;
 
   return (
     <PortalShell
@@ -31,7 +47,12 @@ export default async function AdminProvisionPage() {
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <AdminNav currentPath="/admin/provision" />
+      <ResidenceSwitcher residences={residences} selectedId={residenceId} />
+      {workingName ? (
+        <p className="text-sm text-stone-600">
+          Provisioning into <strong>{workingName}</strong>.
+        </p>
+      ) : null}
       <div className="max-w-3xl">
         <ProvisionRoomsForm roomTypes={types} />
       </div>

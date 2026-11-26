@@ -1,6 +1,5 @@
 import Link from "next/link";
 
-import { ManagerNav } from "@/components/manager/manager-nav";
 import { PortalShell } from "@/components/portal-shell";
 import { expireBookingById } from "@/server/actions/bookings";
 import { requireRole } from "@/server/auth/guards";
@@ -22,7 +21,7 @@ export default async function ManagerReviewsPage({
   const pendingAll = await getManagerReviewQueue({ onlyWithProof: false });
 
   for (const row of pendingAll) {
-    if (row.expiresAt.getTime() < Date.now()) {
+    if (!row.receiptUrl && row.expiresAt.getTime() < Date.now()) {
       await expireBookingById(row.id, "booking.expire_on_manager_queue");
     }
   }
@@ -32,12 +31,11 @@ export default async function ManagerReviewsPage({
   return (
     <PortalShell
       title="Review queue"
-      description="Approve payment proofs to lock beds, or reject to release inventory."
+      description="Confirm non-refundable deposits (GHS 1,000+) to occupy beds, or reject to release inventory."
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <ManagerNav currentPath="/manager/reviews" />
 
       <div className="flex flex-wrap gap-2 text-sm">
         <Link
@@ -48,7 +46,7 @@ export default async function ManagerReviewsPage({
               : "rounded-md border border-stone-300 px-3 py-1.5 font-medium text-stone-800"
           }
         >
-          With proof
+          With deposit proof
         </Link>
         <Link
           href="/manager/reviews?proof=all"
@@ -58,7 +56,7 @@ export default async function ManagerReviewsPage({
               : "rounded-md border border-stone-300 px-3 py-1.5 font-medium text-stone-800"
           }
         >
-          All pending holds
+          All pending
         </Link>
       </div>
 
@@ -69,7 +67,9 @@ export default async function ManagerReviewsPage({
       ) : (
         <ul className="divide-y divide-stone-200 border border-stone-200">
           {queue.map((row) => {
-            const hasProof = Boolean(row.receiptUrl && row.paymentReference);
+            const hasProof = Boolean(
+              row.receiptUrl && row.paymentReference && row.amountPaid,
+            );
             return (
               <li
                 key={row.id}
@@ -81,12 +81,13 @@ export default async function ManagerReviewsPage({
                     {row.bedLabel}
                   </p>
                   <p className="text-sm text-stone-500">
-                    GHS {row.amount}
+                    Full GHS {row.amount}
                     {hasProof
-                      ? ` · ref ${row.paymentReference}`
-                      : " · awaiting payment proof"}
-                    {" · expires "}
-                    {row.expiresAt.toLocaleString()}
+                      ? ` · paid GHS ${row.amountPaid} · ref ${row.paymentReference}`
+                      : " · awaiting GHS 1,000+ deposit"}
+                    {!hasProof
+                      ? ` · apply by ${row.expiresAt.toLocaleString()}`
+                      : " · reserved"}
                   </p>
                 </div>
                 <Link

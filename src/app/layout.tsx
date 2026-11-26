@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,19 +12,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Victorious Residence",
+  title: {
+    default: "Victorious Residence",
+    template: "%s · Victorious Residence",
+  },
   description:
-    "Hostel inventory, resident bookings, and payment review for Victorious Residence.",
+    "A student hostel in Obuasi — browse rooms and facilities online, then register to stay at Victorious Residence.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="flex min-h-dvh flex-col">{children}</body>
     </html>
   );
 }

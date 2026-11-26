@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/login-form";
 import { auth } from "@/server/auth";
 import { defaultDestinationForRole } from "@/server/auth/roles";
+import { duringRequest } from "@/server/db/request";
 
 export const instant = false;
 
@@ -13,6 +14,7 @@ type LoginPageProps = {
 };
 
 async function LoginContent({ searchParams }: LoginPageProps) {
+  await duringRequest();
   const session = await auth();
   const params = await searchParams;
   const callbackUrl =
@@ -27,31 +29,26 @@ async function LoginContent({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <>
+    <div className="space-y-6">
       <div className="space-y-2">
-        <Link href="/" className="text-sm text-stone-500 hover:text-stone-800">
-          ← Home
-        </Link>
-        <h1 className="text-2xl font-semibold text-stone-900">Sign in</h1>
-        <p className="text-sm text-stone-600">
+        <h1 className="font-display text-4xl text-ink">Sign in</h1>
+        <p className="text-sm text-ink/75">
           Residents, managers, and admins sign in here. New applicants can{" "}
-          <Link href="/register" className="font-medium text-stone-900 underline">
+          <Link href="/register" className="font-medium text-forest underline">
             create a resident account
           </Link>
           .
         </p>
       </div>
       <LoginForm callbackUrl={callbackUrl} />
-    </>
+    </div>
   );
 }
 
 export default function LoginPage(props: LoginPageProps) {
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-md flex-col justify-center gap-6 px-6 py-16">
-      <Suspense fallback={<p className="text-sm text-stone-500">Loading…</p>}>
-        <LoginContent {...props} />
-      </Suspense>
-    </main>
+    <Suspense fallback={<p className="text-sm text-ink/60">Loading…</p>}>
+      <LoginContent {...props} />
+    </Suspense>
   );
 }

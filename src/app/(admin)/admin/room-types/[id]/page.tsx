@@ -2,12 +2,12 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/components/admin/admin-nav";
 import { RoomTypeForm } from "@/components/admin/room-type-form";
 import { PortalShell } from "@/components/portal-shell";
 import { requireAdmin } from "@/server/auth/guards";
 import { db } from "@/server/db";
 import { roomTypes } from "@/server/db/schema";
+import { listRoomTypeAngles } from "@/server/queries/showcase";
 
 export const instant = false;
 
@@ -28,6 +28,8 @@ export default async function EditRoomTypePage({
       capacity: roomTypes.capacity,
       pricePerBed: roomTypes.pricePerBed,
       description: roomTypes.description,
+      amenities: roomTypes.amenities,
+      coverImageUrl: roomTypes.coverImageUrl,
       sortOrder: roomTypes.sortOrder,
       isActive: roomTypes.isActive,
     })
@@ -39,23 +41,34 @@ export default async function EditRoomTypePage({
     notFound();
   }
 
+  const gallery = await listRoomTypeAngles(roomType.id);
+
   return (
     <PortalShell
       title={`Edit · ${roomType.name}`}
-      description="Update pricing, capacity for new rooms, or deactivate this type."
+      description="Update pricing, photos, amenities, or deactivate this type."
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
     >
-      <AdminNav currentPath="/admin/room-types" />
       <Link
         href="/admin/room-types"
-        className="text-sm text-stone-500 hover:text-stone-800"
+        className="text-sm text-forest"
       >
-        ← Back to room types
+        Back to room types
       </Link>
       <div className="max-w-xl">
-        <RoomTypeForm mode="edit" roomType={roomType} />
+        <RoomTypeForm
+          mode="edit"
+          roomType={{
+            ...roomType,
+            amenities: roomType.amenities ?? [],
+            gallery: gallery.map((image) => ({
+              url: image.url,
+              caption: image.caption,
+            })),
+          }}
+        />
       </div>
     </PortalShell>
   );

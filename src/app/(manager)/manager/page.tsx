@@ -54,6 +54,7 @@ async function ManagerContent() {
     <PortalShell
       title="Manager panel"
       description="Review payment proofs and approve or reject bed assignments."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

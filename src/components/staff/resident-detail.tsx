@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { BookingManagePanel } from "@/components/booking/booking-manage-panel";
+import type { UpgradeBedOption } from "@/components/booking/upgrade-booking-form";
 import { UserAvatar } from "@/components/site/user-avatar";
 import { PaymentBalanceSummary } from "@/components/staff/payment-balance-summary";
 import { PaymentReminderButton } from "@/components/staff/payment-reminder-button";
@@ -14,7 +16,9 @@ type ResidentDetailProps = {
     email: string;
     phone: string | null;
     nationalId?: string | null;
+    nationalIdImageUrl?: string | null;
     studentId?: string | null;
+    studentIdImageUrl?: string | null;
     hometown?: string | null;
     emergencyContactName?: string | null;
     emergencyContactPhone?: string | null;
@@ -26,11 +30,15 @@ type ResidentDetailProps = {
     bookingId: string;
     amount: string;
     amountPaid?: string | null;
+    paymentStatus?: "PENDING" | "SUCCESS" | "FAILED";
+    residenceId?: string;
+    bedSpaceId?: string;
     roomLabel: string;
     bedLabel: string;
     roomTypeName: string;
     reviewedAt: Date | null;
   } | null;
+  upgradeOptions?: UpgradeBedOption[];
   bookingHistory: Array<{
     id: string;
     amount: string;
@@ -59,6 +67,7 @@ export function ResidentDetail({
   reviewBasePath,
   resident,
   activeAllocation,
+  upgradeOptions = [],
   bookingHistory,
 }: ResidentDetailProps) {
   const allocationBalance = activeAllocation
@@ -103,12 +112,32 @@ export function ResidentDetail({
             <dd className="font-medium text-stone-900">
               {resident.nationalId ?? "—"}
             </dd>
+            {resident.nationalIdImageUrl ? (
+              <dd className="mt-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resident.nationalIdImageUrl}
+                  alt="National ID card"
+                  className="max-h-36 rounded border border-stone-200 object-contain"
+                />
+              </dd>
+            ) : null}
           </div>
           <div>
             <dt className="text-stone-500">Student ID</dt>
             <dd className="font-medium text-stone-900">
               {resident.studentId ?? "—"}
             </dd>
+            {resident.studentIdImageUrl ? (
+              <dd className="mt-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resident.studentIdImageUrl}
+                  alt="Student ID card"
+                  className="max-h-36 rounded border border-stone-200 object-contain"
+                />
+              </dd>
+            ) : null}
           </div>
           <div>
             <dt className="text-stone-500">Emergency contact</dt>
@@ -168,6 +197,16 @@ export function ResidentDetail({
                 />
               </div>
             ) : null}
+            <BookingManagePanel
+              bookingId={activeAllocation.bookingId}
+              mode="staff"
+              paymentStatus={activeAllocation.paymentStatus ?? "SUCCESS"}
+              hasDeposit={Boolean(activeAllocation.amountPaid)}
+              isOccupied
+              currentAmount={activeAllocation.amount}
+              amountPaid={activeAllocation.amountPaid}
+              upgradeOptions={upgradeOptions}
+            />
           </div>
         ) : (
           <p className="text-sm text-stone-600">No occupied bed assigned.</p>

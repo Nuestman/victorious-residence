@@ -29,6 +29,7 @@ async function ResidentContent() {
     <PortalShell
       title="Resident portal"
       description={`Choose a bed, then reserve it with a non-refundable deposit of at least GHS ${MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH")}.`}
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 const palettes = [
   { bg: "#1f3d32", shirt: "#8c6a3d", skin: "#e8c4a2" },
   { bg: "#8c6a3d", shirt: "#1f3d32", skin: "#f0d0b4" },
@@ -34,10 +38,18 @@ export function UserAvatar({
   imageUrl?: string | null;
   className?: string;
 }) {
+  const fallback = userAvatarSrc(name);
+  const [src, setSrc] = useState(imageUrl || fallback);
+
+  useEffect(() => {
+    setSrc(imageUrl || fallback);
+  }, [imageUrl, fallback]);
+
   return (
     <img
-      src={imageUrl || userAvatarSrc(name)}
+      src={src}
       alt=""
+      onError={() => setSrc(fallback)}
       className={className ?? "h-9 w-9 rounded-full object-cover"}
     />
   );

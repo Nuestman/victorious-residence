@@ -1,10 +1,13 @@
 import Link from "next/link";
 
+import { UserAvatar } from "@/components/site/user-avatar";
+
 type StaffRow = {
   id: string;
   fullName: string;
   email: string;
   phone: string | null;
+  avatarUrl?: string | null;
   role: string;
   residenceName: string | null;
 };
@@ -30,14 +33,21 @@ export function StaffList({ staff, basePath }: StaffListProps) {
           key={member.id}
           className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
         >
-          <div>
-            <p className="font-medium text-stone-900">{member.fullName}</p>
-            <p className="text-sm text-stone-500">
-              {member.role}
-              {member.residenceName ? ` · ${member.residenceName}` : ""} ·{" "}
-              {member.email}
-              {member.phone ? ` · ${member.phone}` : ""}
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <UserAvatar
+              name={member.fullName}
+              imageUrl={member.avatarUrl}
+              className="h-10 w-10 shrink-0 rounded-full object-cover"
+            />
+            <div className="min-w-0">
+              <p className="font-medium text-stone-900">{member.fullName}</p>
+              <p className="text-sm text-stone-500">
+                {member.role}
+                {member.residenceName ? ` · ${member.residenceName}` : ""} ·{" "}
+                {member.email}
+                {member.phone ? ` · ${member.phone}` : ""}
+              </p>
+            </div>
           </div>
           <Link
             href={`${basePath}/${member.id}`}

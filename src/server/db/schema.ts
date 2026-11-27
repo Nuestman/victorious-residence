@@ -70,7 +70,11 @@ export const users = pgTable(
     fullName: text("full_name").notNull(),
     phone: text("phone"),
     nationalId: text("national_id"),
+    /** Ghana Card / national ID scan (data URL until object storage). */
+    nationalIdImageUrl: text("national_id_image_url"),
     studentId: text("student_id"),
+    /** Student ID card scan (data URL until object storage). */
+    studentIdImageUrl: text("student_id_image_url"),
     hometown: text("hometown"),
     emergencyContactName: text("emergency_contact_name"),
     emergencyContactPhone: text("emergency_contact_phone"),

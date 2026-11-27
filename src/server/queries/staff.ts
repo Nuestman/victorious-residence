@@ -26,6 +26,7 @@ export async function listStaffDirectory(options: {
       email: users.email,
       fullName: users.fullName,
       phone: users.phone,
+      avatarUrl: users.avatarUrl,
       role: users.role,
       residenceId: users.residenceId,
       residenceName: residences.name,

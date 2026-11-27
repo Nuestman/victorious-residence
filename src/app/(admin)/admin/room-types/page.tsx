@@ -47,6 +47,7 @@ export default async function AdminRoomTypesPage() {
     <PortalShell
       title="Room types"
       description="Create and edit flexible room layouts used for provisioning."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

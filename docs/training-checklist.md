@@ -1,7 +1,7 @@
 # Victorious Residence — Staff training checklist
 
 Use this with the Resident Manager and Admin before December intake.  
-App version: **`0.4.0`** (see portal sidebar footer).
+App version: **`0.5.0`** (see portal sidebar footer).
 
 ## 1. Accounts & access
 
@@ -9,7 +9,7 @@ App version: **`0.4.0`** (see portal sidebar footer).
 - [ ] Sign in as **ADMIN** and confirm `/admin` loads
 - [ ] Sign in as **STAFF** (if seeded) and confirm role-appropriate access
 - [ ] Confirm a resident can **register** at `/register` and land in `/resident`
-- [ ] Open **Profile** (`/profile`): update IDs, hometown, emergency contact, avatar, password
+- [ ] Open **Profile** (`/profile`): update IDs + ID card photos, hometown, emergency contact, avatar, password
 - [ ] Change demo passwords after go-live (seed users are for staging only)
 
 ## 2. Inventory & campuses (Admin)
@@ -34,6 +34,8 @@ App version: **`0.4.0`** (see portal sidebar footer).
 - [ ] Pay a **non-refundable deposit of at least GHS 1,000**, upload reference + receipt
 - [ ] Confirm the bed becomes **PENDING_PAYMENT** (reserved) after deposit proof
 - [ ] Confirm booking appears under **My bookings**
+- [ ] From booking detail: **upgrade/change room** to another available bed; confirm price/balance update
+- [ ] From booking detail: **cancel** application or residence; confirm bed returns to Available
 
 ## 5. Manager review & balances
 
@@ -44,6 +46,7 @@ App version: **`0.4.0`** (see portal sidebar footer).
 - [ ] Confirm Occupancy board matches decisions
 - [ ] Open **Residents** list, open a resident detail, confirm booking history / allocation
 - [ ] Open **Balances** (`/manager/balances`): full / paid / remaining; send a payment reminder email
+- [ ] On resident detail or review detail: **upgrade/change room** and **cancel residence** (staff note required)
 - [ ] Open **Staff** (`/manager/staff`): create/edit STAFF only (cannot assign MANAGER)
 
 ## 6. Admin ops

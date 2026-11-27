@@ -14,7 +14,9 @@ export async function getUserProfile(userId: string) {
       fullName: users.fullName,
       phone: users.phone,
       nationalId: users.nationalId,
+      nationalIdImageUrl: users.nationalIdImageUrl,
       studentId: users.studentId,
+      studentIdImageUrl: users.studentIdImageUrl,
       hometown: users.hometown,
       emergencyContactName: users.emergencyContactName,
       emergencyContactPhone: users.emergencyContactPhone,
@@ -31,4 +33,16 @@ export async function getUserProfile(userId: string) {
     .limit(1);
 
   return row ?? null;
+}
+
+export async function getUserAvatarUrl(userId: string): Promise<string | null> {
+  await duringRequest();
+
+  const [row] = await db
+    .select({ avatarUrl: users.avatarUrl })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return row?.avatarUrl ?? null;
 }

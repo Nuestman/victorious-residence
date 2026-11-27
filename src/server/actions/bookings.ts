@@ -12,7 +12,11 @@ import {
   parseMoneyAmount,
 } from "@/lib/booking";
 import { storeReceipt } from "@/lib/receipts";
-import { requireRole } from "@/server/auth/guards";
+import { requireRole, requireSession } from "@/server/auth/guards";
+import {
+  canManageResidence,
+  hasMinimumRole,
+} from "@/server/auth/roles";
 import { db } from "@/server/db";
 import {
   auditLogs,
@@ -20,6 +24,7 @@ import {
   bookings,
   rooms,
   roomTypes,
+  type UserRole,
 } from "@/server/db/schema";
 
 export type BookingActionState = {
@@ -27,18 +32,83 @@ export type BookingActionState = {
   success?: string;
 };
 
-function revalidateBookingPaths(bookingId?: string) {
+function revalidateBookingPaths(bookingId?: string, residentId?: string) {
   revalidatePath("/resident");
   revalidatePath("/resident/bookings");
   if (bookingId) {
     revalidatePath(`/resident/bookings/${bookingId}`);
     revalidatePath(`/manager/reviews/${bookingId}`);
   }
+  if (residentId) {
+    revalidatePath(`/manager/residents/${residentId}`);
+    revalidatePath(`/admin/residents/${residentId}`);
+  }
   revalidatePath("/manager");
   revalidatePath("/manager/reviews");
+  revalidatePath("/manager/residents");
+  revalidatePath("/manager/balances");
   revalidatePath("/admin");
   revalidatePath("/admin/occupancy");
+  revalidatePath("/admin/residents");
+  revalidatePath("/admin/balances");
   revalidatePath("/");
+}
+
+async function releaseBedInventory(input: {
+  bookingId: string;
+  bedSpaceId: string;
+}) {
+  await db
+    .update(bedSpaces)
+    .set({
+      status: "AVAILABLE",
+      activeBookingId: null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(bedSpaces.id, input.bedSpaceId),
+        eq(bedSpaces.activeBookingId, input.bookingId),
+      ),
+    );
+}
+
+type BookingActor = {
+  id: string;
+  role: UserRole;
+  residenceId?: string | null;
+};
+
+async function requireBookingActor(
+  callbackPath: string,
+): Promise<BookingActor> {
+  const session = await requireSession(callbackPath);
+  return {
+    id: session.user.id,
+    role: session.user.role,
+    residenceId: session.user.residenceId,
+  };
+}
+
+function assertCanManageBooking(
+  actor: BookingActor,
+  booking: { residentId: string; residenceId: string },
+): BookingActionState | null {
+  if (actor.role === "RESIDENT") {
+    if (actor.id !== booking.residentId) {
+      return { error: "You can only manage your own booking." };
+    }
+    return null;
+  }
+
+  if (hasMinimumRole(actor.role, "MANAGER")) {
+    if (!canManageResidence(actor.role, actor.residenceId, booking.residenceId)) {
+      return { error: "You cannot manage bookings for this campus." };
+    }
+    return null;
+  }
+
+  return { error: "You do not have permission to manage this booking." };
 }
 
 /**
@@ -569,5 +639,321 @@ export async function rejectBookingAction(
   return {
     success:
       "Booking rejected and bed released. Apply your deposit policy offline — accepted deposits are non-refundable.",
+  };
+}
+
+/**
+ * Cancel an active application, reserved bed, or occupied residence.
+ * Releases inventory when the booking held PENDING_PAYMENT / OCCUPIED.
+ * Deposits remain non-refundable by policy — handled offline if needed.
+ */
+export async function cancelBookingAction(
+  _prev: BookingActionState,
+  formData: FormData,
+): Promise<BookingActionState> {
+  const actor = await requireBookingActor("/resident/bookings");
+
+  const bookingId = z.string().uuid().safeParse(formData.get("bookingId"));
+  const noteParse = z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .safeParse(formData.get("reviewNote") || undefined);
+  const confirmed = formData.get("confirmCancel") === "yes";
+
+  if (!bookingId.success) {
+    return { error: "Invalid booking." };
+  }
+  if (!confirmed) {
+    return { error: "Confirm cancellation to continue." };
+  }
+
+  const [current] = await db
+    .select()
+    .from(bookings)
+    .where(eq(bookings.id, bookingId.data))
+    .limit(1);
+
+  if (!current) {
+    return { error: "Booking not found." };
+  }
+
+  const denied = assertCanManageBooking(actor, current);
+  if (denied) {
+    return denied;
+  }
+
+  if (current.paymentStatus === "FAILED") {
+    return { error: "This booking is already cancelled or rejected." };
+  }
+
+  const isStaff = hasMinimumRole(actor.role, "MANAGER");
+  const note = noteParse.success ? noteParse.data?.trim() || null : null;
+
+  if (isStaff && (!note || note.length < 3)) {
+    return { error: "Add a short staff note before cancelling." };
+  }
+
+  const hadDeposit = Boolean(current.receiptUrl || current.amountPaid);
+  const defaultNote = isStaff
+    ? note
+    : note && note.length > 0
+      ? note
+      : hadDeposit
+        ? "Cancelled by resident. Any accepted deposit remains non-refundable."
+        : "Application withdrawn by resident.";
+
+  const [cancelled] = await db
+    .update(bookings)
+    .set({
+      paymentStatus: "FAILED",
+      reviewedById: isStaff ? actor.id : current.reviewedById,
+      reviewedAt: new Date(),
+      reviewNote: defaultNote,
+    })
+    .where(
+      and(
+        eq(bookings.id, current.id),
+        sql`${bookings.paymentStatus} in ('PENDING', 'SUCCESS')`,
+      ),
+    )
+    .returning({
+      id: bookings.id,
+      bedSpaceId: bookings.bedSpaceId,
+      residentId: bookings.residentId,
+      paymentStatus: bookings.paymentStatus,
+    });
+
+  if (!cancelled) {
+    return { error: "This booking was already closed." };
+  }
+
+  await releaseBedInventory({
+    bookingId: cancelled.id,
+    bedSpaceId: cancelled.bedSpaceId,
+  });
+
+  await db.insert(auditLogs).values({
+    actorId: actor.id,
+    action: "booking.cancel",
+    entityType: "booking",
+    entityId: cancelled.id,
+    metadata: {
+      previousStatus: current.paymentStatus,
+      bedSpaceId: cancelled.bedSpaceId,
+      hadDeposit,
+      note: defaultNote,
+      byRole: actor.role,
+    },
+  });
+
+  revalidateBookingPaths(cancelled.id, cancelled.residentId);
+  return {
+    success: hadDeposit
+      ? "Residence/booking cancelled and bed released. Deposits stay non-refundable — settle any exceptions offline."
+      : "Application cancelled. You can choose another bed when ready.",
+  };
+}
+
+/**
+ * Move an active booking to a different available bed (upgrade / room change).
+ * Keeps amountPaid; updates full amount to the new room-type price.
+ */
+export async function upgradeBookingAction(
+  _prev: BookingActionState,
+  formData: FormData,
+): Promise<BookingActionState> {
+  const actor = await requireBookingActor("/resident/bookings");
+
+  const bookingId = z.string().uuid().safeParse(formData.get("bookingId"));
+  const newBedSpaceId = z
+    .string()
+    .uuid()
+    .safeParse(formData.get("newBedSpaceId"));
+  const noteParse = z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .safeParse(formData.get("reviewNote") || undefined);
+
+  if (!bookingId.success || !newBedSpaceId.success) {
+    return { error: "Choose a valid booking and bed." };
+  }
+
+  const [current] = await db
+    .select()
+    .from(bookings)
+    .where(eq(bookings.id, bookingId.data))
+    .limit(1);
+
+  if (!current) {
+    return { error: "Booking not found." };
+  }
+
+  const denied = assertCanManageBooking(actor, current);
+  if (denied) {
+    return denied;
+  }
+
+  if (
+    current.paymentStatus !== "PENDING" &&
+    current.paymentStatus !== "SUCCESS"
+  ) {
+    return { error: "Only active bookings can be upgraded or moved." };
+  }
+
+  if (newBedSpaceId.data === current.bedSpaceId) {
+    return { error: "Pick a different bed than the current one." };
+  }
+
+  const [target] = await db
+    .select({
+      bedId: bedSpaces.id,
+      status: bedSpaces.status,
+      residenceId: rooms.residenceId,
+      pricePerBed: roomTypes.pricePerBed,
+      roomTypeName: roomTypes.name,
+      roomLabel: rooms.label,
+      bedLabel: bedSpaces.label,
+      roomTypeActive: roomTypes.isActive,
+      roomActive: rooms.isActive,
+    })
+    .from(bedSpaces)
+    .innerJoin(rooms, eq(bedSpaces.roomId, rooms.id))
+    .innerJoin(roomTypes, eq(rooms.roomTypeId, roomTypes.id))
+    .where(eq(bedSpaces.id, newBedSpaceId.data))
+    .limit(1);
+
+  if (
+    !target ||
+    target.status !== "AVAILABLE" ||
+    !target.roomTypeActive ||
+    !target.roomActive
+  ) {
+    return { error: "That bed is no longer available." };
+  }
+
+  if (target.residenceId !== current.residenceId) {
+    return { error: "Upgrades must stay within the same campus." };
+  }
+
+  const [currentBed] = await db
+    .select({
+      status: bedSpaces.status,
+      activeBookingId: bedSpaces.activeBookingId,
+    })
+    .from(bedSpaces)
+    .where(eq(bedSpaces.id, current.bedSpaceId))
+    .limit(1);
+
+  const inventoryLocked =
+    currentBed?.activeBookingId === current.id &&
+    (currentBed.status === "PENDING_PAYMENT" ||
+      currentBed.status === "OCCUPIED");
+
+  const nextBedStatus = inventoryLocked
+    ? current.paymentStatus === "SUCCESS"
+      ? "OCCUPIED"
+      : "PENDING_PAYMENT"
+    : null;
+
+  const isStaff = hasMinimumRole(actor.role, "MANAGER");
+  const note = noteParse.success ? noteParse.data?.trim() || null : null;
+  if (isStaff && (!note || note.length < 3)) {
+    return { error: "Add a short staff note for the room change." };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      if (inventoryLocked) {
+        const [claimed] = await tx
+          .update(bedSpaces)
+          .set({
+            status: nextBedStatus!,
+            activeBookingId: current.id,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(bedSpaces.id, target.bedId),
+              eq(bedSpaces.status, "AVAILABLE"),
+            ),
+          )
+          .returning({ id: bedSpaces.id });
+
+        if (!claimed) {
+          throw new Error("BED_TAKEN");
+        }
+
+        await tx
+          .update(bedSpaces)
+          .set({
+            status: "AVAILABLE",
+            activeBookingId: null,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(bedSpaces.id, current.bedSpaceId),
+              eq(bedSpaces.activeBookingId, current.id),
+            ),
+          );
+      }
+
+      await tx
+        .update(bookings)
+        .set({
+          bedSpaceId: target.bedId,
+          amount: target.pricePerBed,
+          reviewNote: isStaff
+            ? note
+            : current.reviewNote,
+          updatedAt: new Date(),
+        })
+        .where(eq(bookings.id, current.id));
+
+      await tx.insert(auditLogs).values({
+        actorId: actor.id,
+        action: "booking.upgrade",
+        entityType: "booking",
+        entityId: current.id,
+        metadata: {
+          fromBedSpaceId: current.bedSpaceId,
+          toBedSpaceId: target.bedId,
+          previousAmount: current.amount,
+          newAmount: target.pricePerBed,
+          roomTypeName: target.roomTypeName,
+          roomLabel: target.roomLabel,
+          bedLabel: target.bedLabel,
+          inventoryLocked,
+          note,
+          byRole: actor.role,
+        },
+      });
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "BED_TAKEN") {
+      return { error: "That bed was just taken. Pick another one." };
+    }
+    console.error(error);
+    return { error: "Could not complete the room change. Try again." };
+  }
+
+  revalidateBookingPaths(current.id, current.residentId);
+
+  const newAmount = parseMoneyAmount(target.pricePerBed) ?? 0;
+  const paid =
+    current.amountPaid == null || current.amountPaid === ""
+      ? 0
+      : (parseMoneyAmount(current.amountPaid) ?? 0);
+  const remaining = Math.max(0, Math.round((newAmount - paid) * 100) / 100);
+
+  return {
+    success:
+      remaining > 0
+        ? `Moved to ${target.roomLabel}-${target.bedLabel} (${target.roomTypeName}). New full price GHS ${target.pricePerBed}; balance due GHS ${remaining.toFixed(2)}.`
+        : `Moved to ${target.roomLabel}-${target.bedLabel} (${target.roomTypeName}). Full price GHS ${target.pricePerBed}.`,
   };
 }

@@ -18,6 +18,7 @@ export default async function AdminStaffPage() {
     <PortalShell
       title="Staff"
       description="Create managers and staff for any campus. Only admins can assign the MANAGER role."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

@@ -47,6 +47,7 @@ export default async function EditRoomTypePage({
     <PortalShell
       title={`Edit · ${roomType.name}`}
       description="Update pricing, photos, amenities, or deactivate this type."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

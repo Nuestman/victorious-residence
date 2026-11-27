@@ -32,6 +32,7 @@ export default async function ManagerReviewsPage({
     <PortalShell
       title="Review queue"
       description="Confirm non-refundable deposits (GHS 1,000+) to occupy beds, or reject to release inventory."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

@@ -29,6 +29,7 @@ export default async function AdminStaffEditPage({ params }: PageProps) {
     <PortalShell
       title={member.fullName}
       description="Update role, campus assignment, or password."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

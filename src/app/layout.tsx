@@ -24,6 +24,10 @@ export const metadata: Metadata = {
   },
   description:
     "A student hostel in Obuasi — browse rooms and facilities online, then register to stay at Victorious Residence.",
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    apple: [{ url: "/apple-icon.png", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

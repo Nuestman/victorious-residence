@@ -7,7 +7,7 @@
 
 ---
 
-## Progress (as of 2026-11-26 · app `0.4.0`)
+## Progress (as of 2026-11-27 · app `0.5.0`)
 
 ### Done — Phase 0 Foundation
 - [x] Next.js + TypeScript + Tailwind app scaffold
@@ -45,11 +45,14 @@
 - [x] Staff training checklist (`docs/training-checklist.md`)
 - [x] Residents list + detail in manager and admin portals
 - [x] User profile (`/profile`) + enriched resident fields
+- [x] Resident ID card photo uploads (national + student); staff view on resident detail
 - [x] Public showcase site + contact / inquiries + Resend mail
 - [x] Admin audit log UI (`/admin/audit`)
+- [x] Cancel residence / upgrade room (resident + manager/admin)
+- [x] Brand logos, favicons, portal/public/email chrome
 - [ ] Soft launch UAT with Victorious management
 - [ ] Change demo passwords / production secrets hygiene
-- Deferred (scale later): S3/Vercel Blob for receipts — **data URLs in `bookings.receipt_url` for launch**
+- Deferred (scale later): S3/Vercel Blob for receipts / avatars / ID cards — **data URLs for launch**
 
 ---
 
@@ -259,6 +262,7 @@ Unpaid applications (no deposit) close after abandon window; deposit reservation
 - [x] Training checklist  
 - [x] Neon + Vercel staging (production secrets / soft launch remaining)  
 - [x] Profile, public site, contact inbox, audit UI, balances/reminders (shipped in `0.4.0`)  
+- [x] Cancel/upgrade, ID card uploads, branding (`0.5.0`)  
 - [ ] Soft launch UAT → December intake  
 - Deferred: object-storage receipts, broader automated access-control suite  
 
@@ -270,10 +274,13 @@ Unpaid applications (no deposit) close after abandon window; deposit reservation
 - [x] Role rules: manager/admin CRUD staff; only admin assigns `MANAGER`  
 - [x] Seed demo staff user; stop primary-residence-only helpers  
 
-### Phase 6 — Ops polish (partial in `0.4.0`)
+### Phase 6 — Ops polish (partial through `0.5.0`)
 
 - [x] Deposit reservation + balance tracking + payment reminder email  
 - [x] Admin audit trail UI  
+- [x] Cancel residence / upgrade room  
+- [x] Resident ID card photos  
+- [x] Brand assets in UI + email  
 - [ ] Soft-launch UAT / secret hygiene (ROADMAP P1)  
 
 ---
@@ -321,4 +328,4 @@ RETURNING *;
 2. ~~`drizzle.config.ts` + full schema~~ ✅  
 3. ~~Migration + seed~~ ✅  
 4. ~~Auth + role middleware~~ ✅  
-5. ~~Admin CMS~~ ✅ → ~~Resident booking~~ ✅ → ~~Manager review~~ ✅ → ~~Hardening~~ ✅ → ~~Campuses & staff~~ ✅ → **UAT / ROADMAP P1+** (`0.4.0` shipped)
+5. ~~Admin CMS~~ ✅ → ~~Resident booking~~ ✅ → ~~Manager review~~ ✅ → ~~Hardening~~ ✅ → ~~Campuses & staff~~ ✅ → **UAT / ROADMAP P1+** (`0.5.0` shipped)

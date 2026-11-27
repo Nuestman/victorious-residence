@@ -20,6 +20,7 @@ export default async function ResidentBookingsPage() {
     <PortalShell
       title="My bookings"
       description="Track deposit payments, reservations, and allocation status."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

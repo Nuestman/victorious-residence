@@ -7,21 +7,43 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
-### Added
-
-- Git `development` branch + Neon development DB local workflow (`docs/local-development.md`)
-- GitHub Action `sync-development.yml` resets `development` to `master` after merges/pushes to avoid ahead/behind drift
-
-### Fixed
-
-- Add missing `0005_booking_amount_paid` migration so schema, Drizzle history, and deposit/balance UI stay aligned
-- `npm run db:sync` applies pending SQL safely on DBs previously evolved with `db:push`
-
 ### Planned
 
 - Soft-launch UAT with Victorious management
-- Object-storage receipts / avatars when scaling (kept as Postgres data URLs for launch)
+- Object-storage receipts / avatars / ID cards when scaling (kept as Postgres data URLs for launch)
 - Remaining ROADMAP P1–P3 items
+
+## [0.5.0] - 2026-11-27
+
+### Added
+
+- Cancel residence / booking and upgrade or change rooms
+  - Residents manage from booking detail (`/resident/bookings/[id]`)
+  - Managers/admins manage from resident detail and review detail (staff note required)
+  - Releases inventory; deposits stay non-refundable by policy
+- Resident ID card photo uploads (Ghana Card / national ID + student ID)
+  - Alongside number fields on `/profile` (RESIDENT only)
+  - Visible to managers/admins on resident detail
+  - Migration `0006_user_id_card_images`
+- Brand assets across product surfaces
+  - Seal + wordmark logos, favicons / app icons
+  - Portal chrome, public header/footer, and email wordmark
+- Git `development` + Neon development local workflow (`docs/local-development.md`)
+- GitHub Action `sync-development.yml` keeps `development` aligned with `master` after merges
+- `npm run db:sync` for push/migrate hybrid databases
+- Migration `0005_booking_amount_paid` (closes deposit/balance schema drift)
+
+### Changed
+
+- Profile ID fields/uploads hidden for admin, manager, and staff accounts
+- Resident portal nav label “Browse Rooms”
+- Training checklist covers cancel, upgrade, and ID card photos
+
+### Planned (carried)
+
+- Soft-launch UAT; production secret hygiene
+- Object storage for receipts, avatars, and ID cards
+- Live MoMo/bank gateways, maintenance tickets (see ROADMAP)
 
 ## [0.4.0] - 2026-11-26
 
@@ -121,7 +143,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Project proposal, invoice draft, and architecture plan
 - Environment template (`.env.example`)
 
-[Unreleased]: https://github.com/Nuestman/victorious-residence/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Nuestman/victorious-residence/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Nuestman/victorious-residence/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Nuestman/victorious-residence/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/Nuestman/victorious-residence/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Nuestman/victorious-residence/compare/v0.1.0...v0.2.0

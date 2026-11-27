@@ -35,6 +35,7 @@ export default async function ManagerStaffEditPage({ params }: PageProps) {
     <PortalShell
       title={member.fullName}
       description="Update STAFF details for your residence."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

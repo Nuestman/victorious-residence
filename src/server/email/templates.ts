@@ -1,3 +1,5 @@
+import { appBaseUrl } from "@/lib/app-url";
+import { BRAND_NAME, BRAND_WORDMARK_SRC } from "@/lib/brand";
 import {
   CONTACT_EMAIL,
   CONTACT_PHONE,
@@ -5,11 +7,15 @@ import {
   type SocialKind,
 } from "@/lib/contact";
 
-const BRAND = "Victorious Residence";
+const BRAND = BRAND_NAME;
 const FOREST = "#1f3d32";
 const CREAM = "#f6f1e8";
 const INK = "#1c1917";
 const MUTED = "#5c534c";
+
+function brandWordmarkUrl(): string {
+  return `${appBaseUrl()}${BRAND_WORDMARK_SRC}`;
+}
 
 function escapeHtml(value: string): string {
   return value
@@ -95,13 +101,13 @@ function emailShell(options: {
         <td align="center">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;">
             <tr>
-              <td style="background:${FOREST};padding:22px 28px;">
-                <p style="margin:0;font-family:Georgia,serif;font-size:22px;line-height:1.3;color:${CREAM};">
-                  ${BRAND}
-                </p>
-                <p style="margin:6px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:#c4a574;">
-                  Student hostel · Obuasi
-                </p>
+              <td style="background:${CREAM};padding:20px 24px;text-align:center;border-bottom:1px solid #ece5da;">
+                <img
+                  src="${escapeHtml(brandWordmarkUrl())}"
+                  alt="${escapeHtml(BRAND)}"
+                  width="280"
+                  style="display:block;margin:0 auto;max-width:100%;height:auto;border:0;"
+                />
               </td>
             </tr>
             <tr>

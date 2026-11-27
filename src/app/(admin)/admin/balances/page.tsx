@@ -24,6 +24,7 @@ export default async function AdminBalancesPage() {
     <PortalShell
       title="Payment balances"
       description="Track full vs partial payments by campus and email balance reminders."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

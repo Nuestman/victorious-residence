@@ -1,6 +1,7 @@
 import { CONTACT_EMAIL, CONTACT_PHONE } from "@/lib/contact";
 import { auth } from "@/server/auth";
 import { defaultDestinationForRole } from "@/server/auth/roles";
+import { getUserAvatarUrl } from "@/server/queries/profile";
 import { getPublicShowcase } from "@/server/queries/showcase";
 
 import { PublicHeader } from "./public-header";
@@ -19,11 +20,15 @@ export async function PublicChrome({
   const portalHref = session?.user
     ? defaultDestinationForRole(session.user.role)
     : null;
+  const imageUrl = session?.user?.id
+    ? await getUserAvatarUrl(session.user.id)
+    : null;
   const user = session?.user
     ? {
         name: session.user.name || "Resident",
         email: session.user.email,
         role: session.user.role,
+        imageUrl,
       }
     : null;
 

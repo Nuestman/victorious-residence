@@ -4,7 +4,10 @@ const ALLOWED_TYPES = new Set([
   "image/webp",
 ]);
 
-const MAX_BYTES = 500_000; // ~500KB — keep DB rows and pages light
+/** Max profile photo upload size (bytes). */
+export const AVATAR_MAX_BYTES = 500_000; // ~500KB — keep DB rows and pages light
+
+export const AVATAR_MAX_LABEL = "500KB";
 
 export type AvatarStoreResult =
   | { ok: true; url: string }
@@ -22,10 +25,10 @@ export async function storeAvatar(file: File): Promise<AvatarStoreResult> {
     };
   }
 
-  if (file.size <= 0 || file.size > MAX_BYTES) {
+  if (file.size <= 0 || file.size > AVATAR_MAX_BYTES) {
     return {
       ok: false,
-      error: "Profile photo must be under 500KB.",
+      error: `Profile photo must be under ${AVATAR_MAX_LABEL}.`,
     };
   }
 

@@ -1,7 +1,7 @@
 # Victorious Residence — Post-launch roadmap
 
 Living backlog for work **after** the November launch baseline.  
-Current shipped app version: **`0.4.0`** (Phases 0–5 + public site / deposit / balances / audit).  
+Current shipped app version: **`0.5.0`** (Phases 0–5 + cancel/upgrade, ID cards, branding).  
 Local work: Git + Neon **`development`** branches — see [local-development.md](./local-development.md).  
 Schema notes: **ready** = tables/FKs already support it; **partial** = some pieces exist; **new** = needs schema or integrations.
 
@@ -21,14 +21,17 @@ Priorities: **P0** next build · **P1** soon after soft launch · **P2** follow-
 
 **Model:** one org admin → many residences; each residence has its own manager(s) and staff scoped by `residenceId`.
 
-### Also shipped with `0.4.0` (beyond original P0)
+### Also shipped with `0.4.0`–`0.5.0` (beyond original P0)
 
 - Public hospitality site + contact / inquiries + Resend
 - Deposit-based bed reservation (≥ GHS 1,000)
 - Payment balances + reminder email
-- User profile (`/profile`)
-- Admin audit log UI (`/admin/audit`)
+- User profile (`/profile`) + resident ID card uploads
+- Cancel residence / upgrade room (resident + staff)
+- Admin audit log UI
+- Brand logos / favicons / email wordmark
 - App version in portal sidebar footer
+- Git + Neon `development` workflow + `db:sync`
 
 ---
 
@@ -40,7 +43,7 @@ Priorities: **P0** next build · **P1** soon after soft launch · **P2** follow-
 | Production secret hygiene | — | Rotate demo passwords, harden `AUTH_SECRET` / `CRON_SECRET`, lock down seed accounts |
 | Rate-limit register / login | New | Follow-on called out in `PLAN.md` §7 |
 | Broader automated access-control tests | — | Beyond smoke paths |
-| Profile photo / receipt object storage | Partial (`avatar_url`, `receipt_url`) | Blob/S3 cutover when volume grows |
+| Profile photo / receipt / ID card object storage | Partial (`avatar_url`, `receipt_url`, ID image URLs) | Blob/S3 cutover when volume grows |
 
 ---
 
@@ -68,7 +71,7 @@ Priorities: **P0** next build · **P1** soon after soft launch · **P2** follow-
 
 ## Execution
 
-1. ~~Implement **P0** as Phase 5~~ ✅ (`0.4.0`)  
+1. ~~Implement **P0** as Phase 5~~ ✅ (`0.4.0`) · ops polish in `0.5.0`  
 2. Keep **P1** tied to December intake soft launch.  
 3. Pull **P2+** into dated phases only when prioritized with the client.
 

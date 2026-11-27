@@ -14,6 +14,7 @@ export default async function AdminResidentsPage() {
     <PortalShell
       title="Residents"
       description="Registered applicants and their booking activity."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

@@ -23,6 +23,7 @@ export default async function ManagerStaffPage() {
     <PortalShell
       title="Staff"
       description="Add janitors, security, and other STAFF for your residence. Manager role assignment is admin-only."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

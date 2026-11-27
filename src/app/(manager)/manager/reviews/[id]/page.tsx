@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BookingManagePanel } from "@/components/booking/booking-manage-panel";
 import { ReviewActionsForm } from "@/components/manager/review-actions-form";
 import { PortalShell } from "@/components/portal-shell";
 import { PaymentBalanceSummary } from "@/components/staff/payment-balance-summary";
@@ -8,7 +9,10 @@ import { PaymentReminderButton } from "@/components/staff/payment-reminder-butto
 import { getPaymentBalance } from "@/lib/booking";
 import { expireBookingById } from "@/server/actions/bookings";
 import { requireRole } from "@/server/auth/guards";
-import { getManagerBooking } from "@/server/queries/bookings";
+import {
+  getManagerBooking,
+  getUpgradeBedOptions,
+} from "@/server/queries/bookings";
 
 export const instant = false;
 
@@ -43,12 +47,19 @@ export default async function ManagerReviewDetailPage({
     booking.receiptUrl && booking.paymentReference && booking.amountPaid,
   );
   const canReview = booking.paymentStatus === "PENDING";
+  const canManage =
+    booking.paymentStatus === "PENDING" ||
+    booking.paymentStatus === "SUCCESS";
   const balance = getPaymentBalance(booking.amount, booking.amountPaid);
+  const upgradeOptions = canManage
+    ? await getUpgradeBedOptions(booking.residenceId, booking.bedSpaceId)
+    : [];
 
   return (
     <PortalShell
       title={`${booking.roomLabel}-${booking.bedLabel}`}
       description={`${booking.roomTypeName} · ${balance.label}`}
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
@@ -153,6 +164,22 @@ export default async function ManagerReviewDetailPage({
           This booking is already {booking.paymentStatus.toLowerCase()}.
         </p>
       )}
+
+      {canManage ? (
+        <BookingManagePanel
+          bookingId={booking.id}
+          mode="staff"
+          paymentStatus={booking.paymentStatus}
+          hasDeposit={Boolean(booking.receiptUrl || booking.amountPaid)}
+          isOccupied={
+            booking.paymentStatus === "SUCCESS" ||
+            booking.bedStatus === "OCCUPIED"
+          }
+          currentAmount={booking.amount}
+          amountPaid={booking.amountPaid}
+          upgradeOptions={upgradeOptions}
+        />
+      ) : null}
     </PortalShell>
   );
 }

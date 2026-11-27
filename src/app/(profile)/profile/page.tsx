@@ -24,13 +24,18 @@ export default async function ProfilePage() {
   return (
     <PortalShell
       title="Your profile"
-      description="Update your details, photo, and password. Managers use these fields when verifying residents."
+      description={
+        profile.role === "RESIDENT"
+          ? "Update your details, ID card photos, profile photo, and password. Managers use these when verifying residents."
+          : "Update your details, profile photo, and password."
+      }
+      userId={session.user.id}
       userName={profile.fullName}
       userEmail={profile.email}
       role={profile.role}
     >
       <div className="grid gap-10 lg:grid-cols-2">
-        <section className="space-y-3 rounded-lg border border-ink/10 bg-white p-5">
+        <section className="space-y-3 rounded-lg border border-forest/20 bg-white p-5">
           <h2 className="font-display text-2xl text-ink">Photo</h2>
           <ProfileAvatarForm user={profile} />
         </section>

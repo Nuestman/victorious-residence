@@ -52,6 +52,7 @@ export default async function ManagerInquiriesPage({
     <PortalShell
       title="Messages"
       description="Read and reply to contact form conversations."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

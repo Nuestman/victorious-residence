@@ -43,6 +43,7 @@ export default async function AdminAuditPage({ searchParams }: AuditPageProps) {
     <PortalShell
       title="Audit log"
       description="Immutable trail of staff, resident, and system actions across the app."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

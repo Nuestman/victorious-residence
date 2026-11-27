@@ -28,6 +28,8 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   "booking.deposit_proof": "Submitted deposit proof",
   "booking.approve": "Approved booking",
   "booking.reject": "Rejected booking",
+  "booking.cancel": "Cancelled booking / residence",
+  "booking.upgrade": "Upgraded / moved room",
   "booking.expire": "Booking expired",
   "booking.expire_cron": "Booking expired (cron)",
   "booking.expire_on_view": "Booking expired (view)",

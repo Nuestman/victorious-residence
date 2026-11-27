@@ -15,6 +15,7 @@ export default async function AdminResidencesPage() {
     <PortalShell
       title="Residences"
       description="Add and edit campuses. Each residence has its own inventory, managers, and staff."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

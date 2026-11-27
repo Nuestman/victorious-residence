@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { appBaseUrl } from "@/lib/app-url";
 import { getPaymentBalance } from "@/lib/booking";
 import { requireRole } from "@/server/auth/guards";
 import { canManageResidence } from "@/server/auth/roles";
@@ -15,17 +16,6 @@ export type ReminderActionState = {
   error?: string;
   success?: string;
 };
-
-function appBaseUrl(): string {
-  const authUrl = process.env.AUTH_URL?.trim();
-  if (authUrl) {
-    return authUrl.replace(/\/$/, "");
-  }
-  if (process.env.VERCEL_URL?.trim()) {
-    return `https://${process.env.VERCEL_URL.trim().replace(/\/$/, "")}`;
-  }
-  return "http://localhost:17017";
-}
 
 export async function sendPaymentReminderAction(
   _prev: ReminderActionState,

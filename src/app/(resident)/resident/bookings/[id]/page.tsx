@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BookingManagePanel } from "@/components/booking/booking-manage-panel";
 import { PortalShell } from "@/components/portal-shell";
 import { PaymentProofForm } from "@/components/resident/payment-proof-form";
 import {
@@ -9,7 +10,10 @@ import {
 } from "@/lib/booking";
 import { expireBookingById } from "@/server/actions/bookings";
 import { requireRole } from "@/server/auth/guards";
-import { getBookingForResident } from "@/server/queries/bookings";
+import {
+  getBookingForResident,
+  getUpgradeBedOptions,
+} from "@/server/queries/bookings";
 
 export const instant = false;
 
@@ -52,10 +56,18 @@ export default async function BookingDetailPage({
   const remaining =
     paid !== null ? Math.max(0, Math.round((full - paid) * 100) / 100) : null;
 
+  const canManage =
+    booking.paymentStatus === "PENDING" ||
+    booking.paymentStatus === "SUCCESS";
+  const upgradeOptions = canManage
+    ? await getUpgradeBedOptions(booking.residenceId, booking.bedSpaceId)
+    : [];
+
   return (
     <PortalShell
       title={`${booking.roomLabel}-${booking.bedLabel}`}
       description={`${booking.roomTypeName} · full price GHS ${booking.amount}`}
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}
@@ -172,6 +184,22 @@ export default async function BookingDetailPage({
             fullAmount={booking.amount}
           />
         </section>
+      ) : null}
+
+      {canManage ? (
+        <BookingManagePanel
+          bookingId={booking.id}
+          mode="resident"
+          paymentStatus={booking.paymentStatus}
+          hasDeposit={Boolean(booking.receiptUrl || booking.amountPaid)}
+          isOccupied={
+            booking.paymentStatus === "SUCCESS" ||
+            booking.bedStatus === "OCCUPIED"
+          }
+          currentAmount={booking.amount}
+          amountPaid={booking.amountPaid}
+          upgradeOptions={upgradeOptions}
+        />
       ) : null}
     </PortalShell>
   );

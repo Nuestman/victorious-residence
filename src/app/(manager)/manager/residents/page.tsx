@@ -13,6 +13,7 @@ export default async function ManagerResidentsPage() {
     <PortalShell
       title="Residents"
       description="Registered applicants and their booking activity."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

@@ -59,7 +59,7 @@ const managerLinks: PortalLink[] = [
 ];
 
 const residentLinks: PortalLink[] = [
-  { href: "/resident", label: "Browse", icon: "browse" },
+  { href: "/resident", label: "Browse Rooms", icon: "browse" },
   { href: "/resident/bookings", label: "My bookings", icon: "bookings" },
   { href: "/profile", label: "Profile", icon: "profile" },
 ];

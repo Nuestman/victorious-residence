@@ -17,6 +17,7 @@ export default async function ManagerBalancesPage() {
     <PortalShell
       title="Payment balances"
       description="Track full vs partial payments and email residents who still owe a balance."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

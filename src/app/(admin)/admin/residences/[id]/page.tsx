@@ -41,6 +41,7 @@ export default async function AdminResidenceEditPage({ params }: PageProps) {
     <PortalShell
       title={residence.name}
       description="Update campus details, contact lines, and showcase photos."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

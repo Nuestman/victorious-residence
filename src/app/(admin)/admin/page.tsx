@@ -63,6 +63,7 @@ export default async function AdminHomePage() {
     <PortalShell
       title="Admin CMS"
       description="Manage campuses, inventory, residents, and staff."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

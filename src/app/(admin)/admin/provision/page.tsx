@@ -43,6 +43,7 @@ export default async function AdminProvisionPage() {
     <PortalShell
       title="Provision rooms"
       description="Create physical rooms and auto-generate bed spaces from a room type’s capacity."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

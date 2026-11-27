@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BrandLogo } from "./brand-logo";
 import { ContactActions } from "./contact-actions";
 
 type SiteFooterProps = {
@@ -21,7 +22,7 @@ export function SiteFooter({ name, address }: SiteFooterProps) {
     <footer className="mt-auto border-t border-ink/10 bg-forest text-cream">
       <div className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-12 sm:px-6 md:grid-cols-3">
         <div className="space-y-3">
-          <p className="font-display text-2xl">{name}</p>
+          <BrandLogo name={name} size="md" tone="forest" />
           <p className="text-sm text-cream/80">{address}</p>
           <div className="pt-1">
             <p className="mb-2 text-xs tracking-[0.14em] text-cream/60 uppercase">

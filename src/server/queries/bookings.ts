@@ -105,9 +105,11 @@ export async function getBookingForResident(
       reviewNote: bookings.reviewNote,
       residentId: bookings.residentId,
       bedSpaceId: bookings.bedSpaceId,
+      residenceId: bookings.residenceId,
       bedLabel: bedSpaces.label,
       bedStatus: bedSpaces.status,
       roomLabel: rooms.label,
+      roomTypeId: roomTypes.id,
       roomTypeName: roomTypes.name,
       pricePerBed: roomTypes.pricePerBed,
     })
@@ -121,6 +123,41 @@ export async function getBookingForResident(
     .limit(1);
 
   return row ?? null;
+}
+
+/** Available beds in a residence for cancel/upgrade room moves. */
+export async function getUpgradeBedOptions(
+  residenceId: string,
+  excludeBedSpaceId?: string,
+) {
+  const rows = await db
+    .select({
+      bedId: bedSpaces.id,
+      bedLabel: bedSpaces.label,
+      roomLabel: rooms.label,
+      roomTypeId: roomTypes.id,
+      roomTypeName: roomTypes.name,
+      capacity: roomTypes.capacity,
+      pricePerBed: roomTypes.pricePerBed,
+    })
+    .from(bedSpaces)
+    .innerJoin(rooms, eq(bedSpaces.roomId, rooms.id))
+    .innerJoin(roomTypes, eq(rooms.roomTypeId, roomTypes.id))
+    .where(
+      and(
+        eq(rooms.residenceId, residenceId),
+        eq(roomTypes.isActive, true),
+        eq(rooms.isActive, true),
+        eq(bedSpaces.status, "AVAILABLE"),
+      ),
+    )
+    .orderBy(roomTypes.sortOrder, rooms.label, bedSpaces.label);
+
+  if (!excludeBedSpaceId) {
+    return rows;
+  }
+
+  return rows.filter((row) => row.bedId !== excludeBedSpaceId);
 }
 
 const managerBookingSelect = {
@@ -140,6 +177,7 @@ const managerBookingSelect = {
   bedLabel: bedSpaces.label,
   bedStatus: bedSpaces.status,
   roomLabel: rooms.label,
+  roomTypeId: roomTypes.id,
   roomTypeName: roomTypes.name,
   residentName: users.fullName,
   residentEmail: users.email,

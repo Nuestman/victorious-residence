@@ -22,6 +22,7 @@ export default async function AdminOccupancyPage() {
     <PortalShell
       title="Occupancy"
       description="Live room → bed matrix for the selected campus."
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

@@ -12,6 +12,8 @@ import {
   isPortalLinkActive,
   type PortalLink,
 } from "@/components/portal-nav";
+import { BrandLogo } from "@/components/site/brand-logo";
+import { UserAvatar } from "@/components/site/user-avatar";
 import { UserMenu } from "@/components/site/user-menu";
 import { formatAppVersion } from "@/lib/version";
 import type { UserRole } from "@/server/db/schema";
@@ -21,6 +23,7 @@ type AppChromeProps = {
   description: string;
   userName: string;
   userEmail: string;
+  userImageUrl?: string | null;
   role: UserRole;
   links: PortalLink[];
   children?: React.ReactNode;
@@ -64,6 +67,7 @@ export function AppChrome({
   description,
   userName,
   userEmail,
+  userImageUrl,
   role,
   links,
   children,
@@ -71,12 +75,14 @@ export function AppChrome({
   const pathname = usePathname();
   const headerRef = useRef<HTMLElement>(null);
   const [open, setOpen] = useState(false);
+  const [menuPathname, setMenuPathname] = useState(pathname);
   const [headerHeight, setHeaderHeight] = useState(72);
   const titleIcon = pageIconForPath(pathname);
 
-  useEffect(() => {
+  if (pathname !== menuPathname) {
+    setMenuPathname(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     const header = headerRef.current;
@@ -105,28 +111,32 @@ export function AppChrome({
         className="sticky top-0 z-40 border-b border-cream/10 bg-forest text-cream"
       >
         <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-md border border-cream/30 px-3 py-1.5 text-sm md:hidden"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cream/30 text-cream md:hidden"
               aria-expanded={open}
+              aria-label={open ? "Close menu" : "Open menu"}
               onClick={() => setOpen((value) => !value)}
             >
               <PortalIcon name={open ? "close" : "menu"} className="h-4 w-4" />
-              {open ? "Close" : "Menu"}
             </button>
-            <div>
-              <Link href="/" className="font-display text-xl">
-                Victorious Residence
-              </Link>
-              <p className="text-xs tracking-wide text-brass uppercase">
-                {role} portal
-              </p>
-            </div>
+            <Link href="/" className="flex items-center hover:opacity-90">
+              <BrandLogo
+                size="sm"
+                tone="forest"
+                subtitle={`${role} portal`}
+              />
+            </Link>
           </div>
           <UserMenu
             tone="forest"
-            user={{ name: userName, email: userEmail, role }}
+            user={{
+              name: userName,
+              email: userEmail,
+              role,
+              imageUrl: userImageUrl,
+            }}
           />
         </div>
       </header>
@@ -142,9 +152,9 @@ export function AppChrome({
           <div className="min-h-0 flex-1 overflow-y-auto">
             <SideNav links={links} pathname={pathname} />
           </div>
-          <div className="border-t border-ink/10 px-3 py-3">
-            <p className="text-xs text-ink/50">Victorious Residence</p>
-            <p className="font-mono text-xs text-ink/70">{formatAppVersion()}</p>
+          <div className="flex min-h-14 items-center gap-2.5 border-t border-ink/10 bg-white px-3 py-4">
+            <BrandLogo size="xs" showName={false} tone="cream" />
+            <p className="font-mono text-sm text-ink/70">{formatAppVersion()}</p>
           </div>
         </aside>
         {open ? (
@@ -156,10 +166,17 @@ export function AppChrome({
               onClick={() => setOpen(false)}
             />
             <aside className="relative flex h-full w-64 flex-col bg-white shadow-xl">
-              <div className="flex items-center justify-between border-b border-ink/10 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">{userName}</p>
-                  <p className="text-xs text-ink/60">{userEmail}</p>
+              <div className="flex items-center justify-between gap-3 border-b border-ink/10 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <UserAvatar
+                    name={userName}
+                    imageUrl={userImageUrl}
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{userName}</p>
+                    <p className="truncate text-xs text-ink/60">{userEmail}</p>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -177,9 +194,9 @@ export function AppChrome({
                   onNavigate={() => setOpen(false)}
                 />
               </div>
-              <div className="border-t border-ink/10 px-4 py-3">
-                <p className="text-xs text-ink/50">Victorious Residence</p>
-                <p className="font-mono text-xs text-ink/70">
+              <div className="flex min-h-14 items-center gap-2.5 border-t border-ink/10 bg-white px-4 py-4">
+                <BrandLogo size="xs" showName={false} tone="cream" />
+                <p className="font-mono text-sm text-ink/70">
                   {formatAppVersion()}
                 </p>
               </div>
@@ -201,12 +218,8 @@ export function AppChrome({
             {children}
           </main>
 
-          <footer className="border-t border-ink/10 bg-white px-4 py-4 text-sm text-ink/70 sm:px-6">
-            <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2">
-              <p>
-                Victorious Residence · {role.toLowerCase()} tools ·{" "}
-                <span className="font-mono">{formatAppVersion()}</span>
-              </p>
+          <footer className="min-h-14 border-t border-ink/10 bg-white px-4 py-4 text-sm text-ink/70 sm:px-6">
+            <div className="mx-auto flex h-full w-full min-h-[1.25rem] max-w-6xl flex-wrap items-center justify-end gap-2">
               <Link
                 href="/"
                 className="inline-flex items-center gap-1.5 font-medium text-forest"

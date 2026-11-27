@@ -50,6 +50,7 @@ export default async function RoomTypeBedsPage({
     <PortalShell
       title={summary.name}
       description={`${summary.capacity}-in-1 · GHS ${summary.pricePerBed} / bed · reserve with GHS ${MIN_RESERVATION_DEPOSIT_GHS.toLocaleString("en-GH")}+ non-refundable deposit`}
+      userId={session.user.id}
       userName={session.user.name}
       userEmail={session.user.email}
       role={session.user.role}

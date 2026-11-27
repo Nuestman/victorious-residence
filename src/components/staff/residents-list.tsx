@@ -1,10 +1,13 @@
 import Link from "next/link";
 
+import { UserAvatar } from "@/components/site/user-avatar";
+
 type ResidentRow = {
   id: string;
   fullName: string;
   email: string;
   phone: string | null;
+  avatarUrl?: string | null;
   createdAt: Date;
   bookingCount: number;
   pendingCount: number;
@@ -37,20 +40,27 @@ export function ResidentsList({
           key={row.id}
           className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
         >
-          <div>
-            <p className="font-medium text-stone-900">{row.fullName}</p>
-            <p className="text-sm text-stone-500">
-              {row.email}
-              {row.phone ? ` · ${row.phone}` : null}
-            </p>
-            <p className="mt-1 text-sm text-stone-500">
-              {row.occupiedBed
-                ? `Allocated: ${row.occupiedBed}`
-                : "No active allocation"}
-              {" · "}
-              {row.bookingCount} booking{row.bookingCount === 1 ? "" : "s"}
-              {row.pendingCount > 0 ? ` · ${row.pendingCount} pending` : null}
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            <UserAvatar
+              name={row.fullName}
+              imageUrl={row.avatarUrl}
+              className="h-10 w-10 shrink-0 rounded-full object-cover"
+            />
+            <div className="min-w-0">
+              <p className="font-medium text-stone-900">{row.fullName}</p>
+              <p className="text-sm text-stone-500">
+                {row.email}
+                {row.phone ? ` · ${row.phone}` : null}
+              </p>
+              <p className="mt-1 text-sm text-stone-500">
+                {row.occupiedBed
+                  ? `Allocated: ${row.occupiedBed}`
+                  : "No active allocation"}
+                {" · "}
+                {row.bookingCount} booking{row.bookingCount === 1 ? "" : "s"}
+                {row.pendingCount > 0 ? ` · ${row.pendingCount} pending` : null}
+              </p>
+            </div>
           </div>
           <Link
             href={`${detailBasePath}/${row.id}`}

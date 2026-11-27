@@ -2,18 +2,15 @@
 
 Production hostel inventory, resident booking, and payment-review system.
 
-**Version:** `0.4.0` · **Stack:** Next.js · Drizzle · PostgreSQL (Neon) · Auth.js · Tailwind · Resend
+**Version:** `0.5.0` · **Stack:** Next.js · Drizzle · PostgreSQL (Neon) · Auth.js · Tailwind · Resend
 
-## What's in `0.4.0`
+## What's in `0.5.0`
 
-- Public hospitality site (rooms, facilities, gallery, about, contact)
-- Multi-residence admin CMS + working-campus switcher
-- `STAFF` role and staff directories (admin + manager)
-- Deposit-based bed reservation (≥ GHS 1,000 non-refundable)
-- Payment balances + reminder emails
-- User profile (IDs, hometown, emergency contact, avatar, password)
-- Admin audit log UI
-- App version in portal sidebar footer
+- Cancel residence / booking and upgrade or change rooms (resident + staff)
+- Resident ID card photo uploads (Ghana Card / student ID); staff can view on resident detail
+- Brand logos, favicons, and email wordmark
+- Git + Neon `development` workflow with sync Action to `master`
+- Everything from `0.4.0` (public site, campuses/staff, deposit booking, balances, audit, profile)
 
 ## Branches
 

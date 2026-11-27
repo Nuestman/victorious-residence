@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { PortalIcon } from "@/components/portal-icons";
 
+import { BrandLogo } from "./brand-logo";
 import { ContactEmailLink, ContactPhoneLinks } from "./contact-links";
 import { UserMenu, type UserMenuUser } from "./user-menu";
 
@@ -54,10 +55,13 @@ export function PublicHeader({
       </div>
       <div className="border-b border-ink/10 bg-cream/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="font-display text-xl text-forest sm:text-2xl">
-            {name}
+          <Link
+            href="/"
+            className="flex h-9 min-w-0 items-center hover:opacity-90 md:h-10"
+          >
+            <BrandLogo name={name} size="md" tone="cream" />
           </Link>
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-2.5">
             <nav className="hidden items-center gap-5 text-sm md:flex">
               {links.map((link) => (
                 <Link
@@ -91,12 +95,12 @@ export function PublicHeader({
             ) : null}
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-md border border-forest/20 px-3 py-1.5 text-sm text-forest md:hidden"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-forest/20 text-forest md:hidden"
               aria-expanded={open}
+              aria-label={open ? "Close menu" : "Open menu"}
               onClick={() => setOpen((value) => !value)}
             >
               <PortalIcon name={open ? "close" : "menu"} className="h-4 w-4" />
-              {open ? "Close" : "Menu"}
             </button>
           </div>
         </div>

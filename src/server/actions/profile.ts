@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { storeAvatar } from "@/lib/avatar";
+import { storeIdDocument } from "@/lib/id-document";
 import { requireSession } from "@/server/auth/guards";
 import { db } from "@/server/db";
 import { auditLogs, users } from "@/server/db/schema";
@@ -62,6 +63,10 @@ function revalidateProfile() {
   revalidatePath("/profile");
   revalidatePath("/admin/residents");
   revalidatePath("/manager/residents");
+  revalidatePath("/admin");
+  revalidatePath("/manager");
+  revalidatePath("/resident");
+  revalidatePath("/", "layout");
 }
 
 export async function updateProfileAction(
@@ -84,13 +89,70 @@ export async function updateProfileAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid profile details." };
   }
 
+  const [current] = await db
+    .select({
+      role: users.role,
+      nationalId: users.nationalId,
+      studentId: users.studentId,
+      nationalIdImageUrl: users.nationalIdImageUrl,
+      studentIdImageUrl: users.studentIdImageUrl,
+    })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  if (!current) {
+    return { error: "Account not found." };
+  }
+
+  const isResident = current.role === "RESIDENT";
+  let nationalId = current.nationalId;
+  let studentId = current.studentId;
+  let nationalIdImageUrl = current.nationalIdImageUrl;
+  let studentIdImageUrl = current.studentIdImageUrl;
+  const imageFields: string[] = [];
+
+  // ID numbers + card photos are resident verification fields only.
+  if (isResident) {
+    nationalId = parsed.data.nationalId;
+    studentId = parsed.data.studentId;
+
+    const nationalIdFile = formData.get("nationalIdImage");
+    if (nationalIdFile instanceof File && nationalIdFile.size > 0) {
+      const stored = await storeIdDocument(nationalIdFile, "National ID card");
+      if (!stored.ok) {
+        return { error: stored.error };
+      }
+      nationalIdImageUrl = stored.url;
+      imageFields.push("nationalIdImage");
+    } else if (formData.get("removeNationalIdImage") === "yes") {
+      nationalIdImageUrl = null;
+      imageFields.push("nationalIdImage:removed");
+    }
+
+    const studentIdFile = formData.get("studentIdImage");
+    if (studentIdFile instanceof File && studentIdFile.size > 0) {
+      const stored = await storeIdDocument(studentIdFile, "Student ID card");
+      if (!stored.ok) {
+        return { error: stored.error };
+      }
+      studentIdImageUrl = stored.url;
+      imageFields.push("studentIdImage");
+    } else if (formData.get("removeStudentIdImage") === "yes") {
+      studentIdImageUrl = null;
+      imageFields.push("studentIdImage:removed");
+    }
+  }
+
   await db
     .update(users)
     .set({
       fullName: parsed.data.fullName,
       phone: parsed.data.phone,
-      nationalId: parsed.data.nationalId,
-      studentId: parsed.data.studentId,
+      nationalId,
+      nationalIdImageUrl,
+      studentId,
+      studentIdImageUrl,
       hometown: parsed.data.hometown,
       emergencyContactName: parsed.data.emergencyContactName,
       emergencyContactPhone: parsed.data.emergencyContactPhone,
@@ -98,7 +160,13 @@ export async function updateProfileAction(
     .where(eq(users.id, session.user.id));
 
   await writeAudit(session.user.id, "profile.update", {
-    fields: Object.keys(parsed.data),
+    fields: [
+      ...Object.keys(parsed.data).filter(
+        (field) =>
+          isResident || (field !== "nationalId" && field !== "studentId"),
+      ),
+      ...imageFields,
+    ],
   });
 
   revalidateProfile();
